@@ -1,0 +1,109 @@
+---
+title: "Breeding Value Extremes Plots"
+---
+Load packages
+```{r}
+library(ggplot2)
+library(Hmisc)
+library(dplyr)
+library(cumstats)
+```
+
+Load in phenotype data
+```{r}
+gebv_and_ph1 <- read.csv("mp_mastersheet.csv")
+```
+Remove Replicates
+
+```{r}
+replicates <- c("S31R", "S54R","S67R", "S76R", "S82R", "S223R", "S332Q", "S410Q", "S415R", "S571Q",
+              "S655R", "S868R", "S885R", "S895R", "S901Q", "S925Q", "S928Q", "S939Q", "S954R", "S987Q",
+              "SA", "SB", "SE", "SH", "SJ", "S394C")
+gebv_and_ph <- gebv_and_ph1[which(!(gebv_and_ph1$Label %in% replicates)),]
+```
+
+Get adults and juveniles
+```{r}
+gebv_and_ph_j <- gebv_and_ph[which(gebv_and_ph$Type == "Juvenile"), ]
+gebv_and_ph_a <- gebv_and_ph[which(gebv_and_ph$Type == "Adult"), ]
+```
+
+Cumulative mean of scores for GEBV
+```{r}
+gebv_and_ph_a_order <- gebv_and_ph_a[order(gebv_and_ph_a$GEBV),]
+gebv_and_ph_a_order <- gebv_and_ph_a_order[which(!is.na(gebv_and_ph_a_order$PercentScore_2019)),]
+gebv_and_ph_a_order <- gebv_and_ph_a_order[1:57,]
+
+gebv_and_ph_a_order2 <- gebv_and_ph_a[order(gebv_and_ph_a$GEBV, decreasing = T),]
+gebv_and_ph_a_order2 <- gebv_and_ph_a_order2[which(!is.na(gebv_and_ph_a_order2$PercentScore_2019)),]
+gebv_and_ph_a_order2 <- gebv_and_ph_a_order2[1:57,]
+
+cumulative_a <- data.frame(Percentage = 1:57/113*100, 
+                          MeanHigh = cummean(gebv_and_ph_a_order2$PercentScore_2019),
+                          MeanLow = cummean(gebv_and_ph_a_order$PercentScore_2019),
+                          SEHigh = sqrt(cumvar(gebv_and_ph_a_order$PercentScore_2019))/sqrt(1:57),
+                          SELow = sqrt(cumvar(gebv_and_ph_a_order2$PercentScore_2019))/sqrt(1:57),
+                          Diff = cummean(gebv_and_ph_a_order2$PercentScore_2019) - cummean(gebv_and_ph_a_order$PercentScore_2019))
+
+adult_diff <- ggplot(data = cumulative_a, aes(Percentage*2, Diff))+
+  geom_pointrange(aes(ymin = Diff-SELow, ymax = Diff+SEHigh), colour = "darkorange2", shape = 20)+
+  geom_point(colour = "darkorange4")+
+  ylim(-50, 50)+
+  theme_minimal()+
+  geom_hline(yintercept =  0, colour = "black")+
+  labs(x = "Percentage of trees included",
+       y = "Difference in mean canopy cover")+
+  ggtitle("Adults")
+
+adult_diff
+```
+
+```{r}
+gebv_and_ph_j_order <- gebv_and_ph_j[order(gebv_and_ph_j$GEBV),]
+gebv_and_ph_j_order <- gebv_and_ph_j_order[which(!is.na(gebv_and_ph_j_order$Score_2019)),]
+gebv_and_ph_j_order <- gebv_and_ph_j_order[1:219,]
+
+gebv_and_ph_j_order2 <- gebv_and_ph_j[order(gebv_and_ph_j$GEBV, decreasing = T),]
+gebv_and_ph_j_order2 <- gebv_and_ph_j_order2[which(!is.na(gebv_and_ph_j_order2$Score_2019)),]
+gebv_and_ph_j_order2 <- gebv_and_ph_j_order2[1:219,]
+
+cumulative_j <- data.frame(Percentage = 1:219/438*100, 
+                          MeanHigh = cummean(gebv_and_ph_j_order2$Score_2019),
+                          MeanLow = cummean(gebv_and_ph_j_order$Score_2019),
+                          SEHigh = sqrt(cumvar(gebv_and_ph_j_order$Score_2019))/sqrt(1:219),
+                          SELow = sqrt(cumvar(gebv_and_ph_j_order2$Score_2019))/sqrt(1:219),
+                          Diff = cummean(gebv_and_ph_j_order2$Score_2019) - cummean(gebv_and_ph_j_order$Score_2019))
+
+juv_diff <- ggplot(data = cumulative_j, aes(Percentage*2, Diff))+
+  geom_pointrange(aes(ymin = Diff-SELow, ymax = Diff+SEHigh), colour = "skyblue1", shape = 20)+
+  ylim(-2, 2)+
+  geom_point(colour = "dodgerblue4")+
+  theme_minimal()+
+  geom_hline(yintercept =  0, colour = "black")+
+  labs(x = "Percentage of trees included",
+       y = "Difference in mean score")+
+  ggtitle("Juveniles")
+
+juv_diff
+```
+
+```{r}
+library(cowplot)
+a_and_j <- ggdraw()+
+  draw_plot(adult_diff, x = 0.05, y = 0.5, height = 0.5, width = 0.9)+
+  draw_plot(juv_diff, x = 0.05, y = 0, height = 0.5, width = 0.9)
+
+a_and_j
+```
+
+```{r}
+tiff("mp_fig3.tiff", units="mm", width=180, height=200, res=300)
+a_and_j
+dev.off()
+png("mp_fig3.png", units="mm", width=180, height=200, res=300)
+a_and_j
+dev.off()
+jpeg("mp_fig3.jpeg", units="mm", width=180, height=200, res=300)
+a_and_j
+dev.off()
+```
