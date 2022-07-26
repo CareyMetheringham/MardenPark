@@ -1,7 +1,9 @@
 library(rrBLUP)
+library(ggplot2)
+library(cowplot)
 
 #Detecting shifts in breeding values between adults and juveniles 
-#Accounding for relatedness 
+#Accounting for anscestry of juveniles
 #Based on methods and code by Richard A. Nichols
 
 #Import effect sizes
@@ -17,7 +19,19 @@ GTJgebv <- gebv_sites[gebv_sites$Age=="Juv", 4:ncol(gebv_sites)]
 #Calculate GEBV scores 
 new_gebv <- (as.matrix(gebv_sites[,-(1:3)])%*%es) + 1
 #Check that they are the same as listed
-plot(new_gebv, gebv_sites$GEBV)
+gebv_A <- new_gebv[gebv_sites$Age=="Adult"]
+gebv_J <- new_gebv[gebv_sites$Age=="Juv"]
+
+#Plot the raw difference in gebv between adults and juveniles
+gebv_A_and_J <- data.frame(Age = gebv_sites$Age, GEBV = new_gebv)
+Xlabs <- c("Adults (n=128)", "Juveniles (n = 452)")
+fig2A <- ggplot(data = gebv_A_and_J, aes(x = Age, y = GEBV))+
+  geom_boxplot(fill = c("#D55E00", "skyblue")) +
+  theme_minimal() + xlab("") +
+  theme(axis.text=element_text(size=12))+
+  ggtitle("A")+
+  ylab("GEBV")+
+  scale_x_discrete(labels= Xlabs)
 
 #Unlinked sites
 unlinked_sites <- read.csv(file = "unlinked_sites.csv")
@@ -28,15 +42,10 @@ juv_unlinked <- unlinked_sites[unlinked_sites$Age=="Juv",]
 GTA <- adult_unlinked[, 4:ncol(adult_unlinked)]
 GTJ <- juv_unlinked[, 4:ncol(juv_unlinked)]
 
-#Select 5,000 sites at random
-gt_sample <- sample(colnames(GTA), 5000, replace = F)
-GTA <- GTA[, which(colnames(GTA) %in% gt_sample)]
-GTJ <- GTJ[, which(colnames(GTJ) %in% gt_sample)]
-
 #Train the model in juveniles
 J_from_unlinked  <-
   mixed.solve(
-    juv_unlinked[,2],
+    gebv_J,
     Z = GTJ,
     K = NULL,
     SE = FALSE,
@@ -47,13 +56,13 @@ J_from_unlinked  <-
 EST_J_from_unlinked <- as.vector(as.matrix(GTJ) %*% J_from_unlinked$u)+ rep(J_from_unlinked$beta, length(adult_unlinked[,2]))
 #Fit linear model
 lm(juv_unlinked$GEBV ~ EST_J_from_unlinked)
-plot(EST_J_from_unlinked ~ juv_unlinked$GEBV)
+plot(EST_J_from_unlinked ~ gebv_J)
 abline(0,1, col = "red")
 
 #Train the model in adults
 A_from_unlinked <-
   mixed.solve(
-    adult_unlinked[,2],
+    gebv_A,
     Z = GTA,
     K = NULL,
     SE = FALSE,
@@ -61,25 +70,50 @@ A_from_unlinked <-
   )
 #Predict GEBV in juveniles
 EST_J_from_unlinkedA <- as.vector(as.matrix(GTJ) %*% A_from_unlinked$u) + rep(A_from_unlinked$beta, length(juv_unlinked[,2]))
-lm(juv_unlinked$GEBV ~ EST_J_from_unlinkedA)$coefficients
+lm(gebv_J ~ EST_J_from_unlinkedA)$coefficients
 #Check for significant difference in intercept
 
 #Method by R.A.N:
-#Check the deviation from the 1:1 line
+#Quantify the shift between adults and juveniles
 mod <- lm(juv_unlinked$GEBV ~ 1, offset = EST_J_from_unlinkedA)
 summary(mod)
-shift <- coefficients(mod)/sd(juv_unlinked$GEBV)
+shift <- coefficients(mod)/sd(gebv_J)
 shift
 
 #Observed vs predicted
-plot(EST_J_from_unlinkedA ~ juv_unlinked$GEBV)
+plot(gebv_J~ EST_J_from_unlinkedA)
 abline(0,1)
 abline(coefficients(mod), 1, col  = 'blue')
 
+#Plot the predictions
+juvenile_gebv <- data.frame(GEBV = gebv_J, Predicted = EST_J_from_unlinkedA)
+fig2B <- ggplot(data = juvenile_gebv, aes(y = GEBV, x = Predicted))+
+  geom_point(alpha = 0.5)+
+  theme_minimal()+
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed")+
+  geom_abline(slope = 1, intercept = coefficients(mod)[1], colour = "blue")+
+  xlab("Juvenile GEBV scores predicted from ancestry")+
+  ggtitle("B")
+
+#Plot 2A and 2B together
+combined_plot_2 <- ggdraw() +
+  draw_plot(fig2A, x = 0.1, y = 0.5, width = 0.8, height = 0.45) +
+  draw_plot(fig2B, x = 0.10, y = 0.05, width = 0.8, height = 0.5)
+combined_plot_2
+
+tiff("../Figures/marden_park_fig2.tiff", units="mm", width=180, height=200, res=300)
+combined_plot_2 
+dev.off()
+png("../Figures/marden_park_fig2.png", units="mm", width=180, height=200, res=300)
+combined_plot_2 
+dev.off()
+jpeg("../Figures/marden_park_fig2.jpeg", units="mm", width=180, height=200, res=300)
+combined_plot_2 
+dev.off()
 
 #Compare with shift from neutral expectations (allowing for relatedness)
 #to crude difference in mean GEBV score
-rawDiff <- mean(juv_gebv_table$Previous) - mean(adult_gebv_table$Previous)
+rawDiff <- mean(gebv_J) - mean(gebv_A)
 rawDiff/coefficients(mod)
 
 #What truncation selection is required to give same mean shift?
@@ -89,18 +123,16 @@ shiftcalc <- function(cutoff, sd=1)
            upper= 11)$value / pnorm(cutoff, sd=sd, lower.tail = FALSE)
 }
 
-# shiftcalc(-1.435)
-# pnorm(-1.435)
-# 
-# # now do it for 0.422/0.4 = 1.06
-# shiftcalc(-1.78,sd=sqrt(2.5))*.4
-# pnorm(-1.78, sd = sqrt(2.5))
+#solved by trial and error for a shift of 0.1535
+shiftcalc(-1.78,sd=sqrt(2.5))*.4
+pnorm(-1.78, sd = sqrt(2.5))
+
+#SANITY CHECKS ETC
 
 # replicate this estimate of selection on raw GEBV score with a random normal sample
 randNorm <- rnorm(100000)
 # by trial and error truncation of values below 0.13 gives a shift of 0.06
 mean(randNorm[randNorm > -0.677])
-
 
 # now add environmental variation with a heritability of 0.4 (i.e. Ve = 1.5 Va)
 randPheno <- randNorm + rnorm(100000, sd = sqrt(1.5))
@@ -116,14 +148,6 @@ sdj
 predBV <- rnorm(700,sd = 0.06)
 hist(predBV)
 
-
-
-
-
-
-
-
-
 #Use LOO to validate the results
 #Leave one out for Juveniles
 loo_est_J <- c()
@@ -138,54 +162,3 @@ for (i in 1:nrow(juv_unlinked)){
     )
   loo_est_J[i] <- as.vector(as.matrix(GTJ[i,]) %*% BLUPJ$u)
 }
-
-#Format output into table
-juv_gebv_table <- data.frame(juv_unlinked$GEBV,EST_J_from_unlinkedA,EST_J_from_unlinked,loo_est_J)
-adult_gebv_table <- data.frame(adult_unlinked$GEBV, EST_A_from_unlinked, EST_A_from_unlinkedJ, loo_est_A)
-colnames(juv_gebv_table) <- colnames(adult_gebv_table) <- c("Previous", "PredA", "PredJ", "PredLOO")
-
-
-
-
-
-#Plot output
-p_4B <- ggplot(data = juv_gebv_table, aes(x=PredA,y=Previous))+
-  geom_point(alpha = 0.5)+
-  geom_abline(slope = 1,intercept = 0, colour="red", linetype = "dashed")+
-  geom_smooth(method = "lm", se = FALSE)+
-  theme_minimal()+
-  xlab('Juveniles\' GEBV scores predicted from their ancestry')+
-  ylab("Juvenile GEBV")+
-  ggtitle("B")
-
-
-p1 <- ggplot(data = juv_gebv_table, aes(x=PredLOO,y=Previous))+
-  geom_point(alpha = 0.5)+
-  geom_abline(slope = 1,intercept = 0, colour="red", linetype = "dashed")+
-  geom_smooth(method = "lm", se = FALSE)+
-  theme_minimal()+
-  xlab("GEBV Predicted from Related Juveniles")+
-  ylab("Juvenile GEBV")+
-  ggtitle("A")+
-  ylim(-0.6,1.5)+
-  xlim(-0.6,0.7)
-
-p2 <- ggplot(data = juv_gebv_table, aes(x=PredA,y=Previous))+
-  geom_point(alpha = 0.5)+
-  geom_abline(slope = 1,intercept = 0, colour="red", linetype = "dashed")+
-  geom_smooth(method = "lm", se = FALSE)+
-  theme_minimal()+
-  xlab('Juveniles\' GEBV scores predicted from their ancestry')+
-  ylab("Juvenile GEBV")+
-  ggtitle("B")+
-  ylim(-0.6,1.5)+
-  xlim(-0.6,0.7)
-
-
-plots <- ggdraw() +
-  draw_plot(p1, x = 0, y = 0, width = .5, height = 1) +
-  draw_plot(p2, x = .5, y = 0, width = .5, height = 1) +
-
-tiff("mp_ex_fig3.tiff", units="mm", width=180, height=100, res=300)
-plots
-dev.off()
