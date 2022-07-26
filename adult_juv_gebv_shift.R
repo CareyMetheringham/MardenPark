@@ -140,14 +140,6 @@ randPheno <- randNorm + rnorm(100000, sd = sqrt(1.5))
 mean(randNorm[randPheno > -0.33])
 pnorm(-0.33, sd = sqrt(2.5))
 
-# Simulate selection on GEBV
-# normal distribution to simulate the variation in predicted BV
-# Observed sd of juveniles
-sdj <- sqrt(0.1425774)
-sdj
-predBV <- rnorm(700,sd = 0.06)
-hist(predBV)
-
 #Use LOO to validate the results
 #Leave one out for Juveniles
 loo_est_J <- c()
