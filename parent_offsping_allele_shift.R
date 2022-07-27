@@ -2,14 +2,9 @@
 #frequencies in offsping trees compared to likely parents
 
 #Import csv files with data on the GEBV sites and unlinked sites
-gebv_sites <- read.csv(file = "gebv_sites.csv")
-#Get frequencies if the alleles with known effect size
-gt <- t(gebv_sites[, -(1:3)])
-colnames(gt) <- gebv_sites$Tree
-
+gt <- read.csv(file = "gebv_site_frequencies.csv")
 #Read in the related trees
-related <- read.csv("~/related.trees", sep = "")
-related <- related[which(related$id %in% colnames(gt)),]
+related <- read.csv(file = "related_trees.csv")
 
 #Pull out the frequencies of related trees
 #Format allele frequencies as tables

@@ -3,14 +3,15 @@ library(ggplot2)
 library(cowplot)
 
 #Detecting shifts in breeding values between adults and juveniles 
-#Accounting for anscestry of juveniles
+#Accounting for ancestry of juveniles
 #Based on methods and code by Richard A. Nichols
 
-#Import effect sizes
+#Import effect sizes - Supplementary Data 2
 es_file <- read.csv("MP_effects_MIA_and_MAA.csv")
 es <- with(es_file, EES.MIA - EES.MAA)
 
 #Import csv files with data on the GEBV sites and unlinked sites
+#- Supplementary Data 3
 gebv_sites <- read.csv(file = "gebv_sites.csv")
 #Extract the genotype matrices
 GTAgebv <- gebv_sites[gebv_sites$Age=="Adult", 4:ncol(gebv_sites)]
@@ -55,7 +56,7 @@ J_from_unlinked  <-
 #Overfitting of juveniles from juveniles
 EST_J_from_unlinked <- as.vector(as.matrix(GTJ) %*% J_from_unlinked$u)+ rep(J_from_unlinked$beta, length(adult_unlinked[,2]))
 #Fit linear model
-lm(juv_unlinked$GEBV ~ EST_J_from_unlinked)
+lm(gebv_J ~ EST_J_from_unlinked)
 plot(EST_J_from_unlinked ~ gebv_J)
 abline(0,1, col = "red")
 
@@ -69,7 +70,7 @@ A_from_unlinked <-
     return.Hinv = FALSE
   )
 #Predict GEBV in juveniles
-EST_J_from_unlinkedA <- as.vector(as.matrix(GTJ) %*% A_from_unlinked$u) + rep(A_from_unlinked$beta, length(juv_unlinked[,2]))
+EST_J_from_unlinkedA <- as.vector(as.matrix(GTJ) %*% A_from_unlinked$u) + rep(A_from_unlinked$beta, length(gebv_J))
 lm(gebv_J ~ EST_J_from_unlinkedA)$coefficients
 #Check for significant difference in intercept
 
@@ -127,18 +128,20 @@ shiftcalc <- function(cutoff, sd=1)
 shiftcalc(-1.78,sd=sqrt(2.5))*.4
 pnorm(-1.78, sd = sqrt(2.5))
 
+#HERITABILITY
+
+#Assuming 0.4 was heritability 
+#If heritability is dropped to 0.2
+shiftcalc(-0.86,sd=sqrt(2.5))*.2
+pnorm(-0.86, sd = sqrt(2.5))
+#This same shift would be equivilent to truncation selection of 29%?
+
+#If heritability is even lower at 0.1
+shiftcalc(0.41,sd=sqrt(2.5))*.1
+pnorm(0.41, sd = sqrt(2.5))
+#Then that would imply 60% truncation!
+
 #SANITY CHECKS ETC
-
-# replicate this estimate of selection on raw GEBV score with a random normal sample
-randNorm <- rnorm(100000)
-# by trial and error truncation of values below 0.13 gives a shift of 0.06
-mean(randNorm[randNorm > -0.677])
-
-# now add environmental variation with a heritability of 0.4 (i.e. Ve = 1.5 Va)
-randPheno <- randNorm + rnorm(100000, sd = sqrt(1.5))
-
-mean(randNorm[randPheno > -0.33])
-pnorm(-0.33, sd = sqrt(2.5))
 
 #Use LOO to validate the results
 #Leave one out for Juveniles
