@@ -53,6 +53,7 @@ diff_df <-
 
 #Import effect sizes for each site - Supplementary Data 2
 es_file <- read.csv("effect_sizes.csv")
+es <- data.frame(SNP = es_file$SNP, ES = with(es_file, EES.MIA - EES.MAA))
 #Test for correlation between mean_diff and effect size
 ees_diff <- merge(diff_df, es, by = "SNP")
 cor.test(ees_diff$ES, ees_diff$mean_diff)

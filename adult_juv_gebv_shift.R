@@ -7,7 +7,7 @@ library(cowplot)
 #Based on methods and code by Richard A. Nichols
 
 #Import effect sizes - Supplementary Data 2
-es_file <- read.csv("MP_effects_MIA_and_MAA.csv")
+es_file <- read.csv("effect_sizes.csv")
 es <- with(es_file, EES.MIA - EES.MAA)
 
 #Import csv files with data on the GEBV sites and unlinked sites
