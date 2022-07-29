@@ -87,12 +87,12 @@ fig5 <- ggplot(data = binned_table, aes(x = ESPQ, y = DIFF))+
   ylab("Mean change in allele frequency")+
   xlab("Effect size x pq (200 quantiles)")
   
-tiff("/Users/carey/University/Marden_Park/Figures/Final_Figures/mp_fig5.tiff", units="mm", width=180, height=100, res=300)
+tiff("/Users/carey/University/Marden_Park/Figures/Final_Figures/mp_fig3.tiff", units="mm", width=180, height=100, res=300)
 fig5
 dev.off()
-png("/Users/carey/University/Marden_Park/Figures/Final_Figures/mp_fig5.png", units="mm", width=180, height=100, res=300)
+png("/Users/carey/University/Marden_Park/Figures/Final_Figures/mp_fig3.png", units="mm", width=180, height=100, res=300)
 fig5
 dev.off()
-jpeg("/Users/carey/University/Marden_Park/Figures/Final_Figures/mp_fig5.jpeg", units="mm", width=180, height=100, res=300)
+jpeg("/Users/carey/University/Marden_Park/Figures/Final_Figures/mp_fig3.jpeg", units="mm", width=180, height=100, res=300)
 fig5
 dev.off()

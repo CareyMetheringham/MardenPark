@@ -60,6 +60,25 @@ lm(gebv_J ~ EST_J_from_unlinked)
 plot(EST_J_from_unlinked ~ gebv_J)
 abline(0,1, col = "red")
 
+#Plot the predictions
+juvenile_gebv <- data.frame(GEBV = gebv_J, Predicted = EST_J_from_unlinked)
+fig_test <- ggplot(data = juvenile_gebv, aes(y = GEBV, x = Predicted))+
+  geom_point(alpha = 0.5)+
+  theme_minimal()+
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed")+
+  xlab("Juvenile GEBV scores predicted from 5,793 sites")
+fig_test
+
+tiff("../Figures/marden_park_fig_test.tiff", units="mm", width=180, height=180, res=300)
+fig_test
+dev.off()
+png("../Figures/marden_park_fig_test.png", units="mm", width=180, height=180, res=300)
+fig_test 
+dev.off()
+jpeg("../Figures/marden_park_fig_test.jpeg", units="mm", width=180, height=180, res=300)
+fig_test
+dev.off()
+
 #Train the model in adults
 A_from_unlinked <-
   mixed.solve(
