@@ -8,10 +8,10 @@ Uses the data in Supplementary Data 1 to create the stacked bar plot in Figure 1
 ## TO ADD - BGLR code
 Are sites used to calculate GEBV more involved?
 
-## TO ADD
+## TO ADD PCR
 Create Extended Data Figure 2
 
-## TO ADD
+## GEBV_pheno_corr.R
 Create Extended Data Figure 3
 
 ###  gebv_extremes_plots.Rmd
