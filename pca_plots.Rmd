@@ -1,0 +1,98 @@
+---
+title: "PCA plots"
+output: html_notebook
+---
+
+Load packages
+```{r}
+library(ggplot2)
+library(data.table)
+```
+Import PCA
+```{r}
+pca_table<- read.table("~/MardonPark/Data/plink.eigenvec", quote="\"", comment.char="")
+colnames(pca_table)[1:4] <- c("Label","Label2","EV1","EV2")
+```
+
+Import Mastersheet
+```{r}
+mp_mastersheet <- read.csv("/users/carey/Documents/MardonPark/Data/mp_mastersheet.csv")
+```
+
+Filter out not included samples
+```{r}
+mastersheet_pca <- merge(mp_mastersheet, pca_table, by = "Label")
+```
+
+
+```{r}
+age_pca <- ggplot(data = mastersheet_pca[which(mastersheet_pca$Type %in% c("Adult","Juvenile", "Intermediate")), ], aes(x = EV1, y = EV2, colour = Type)) +
+  geom_point() +
+  geom_point() + 
+  #xlim(-0.1, 0.22) + ylim(-0.2, 0.2) +
+  theme_minimal() +
+  labs(colour = "Age")
+
+age_pca
+```
+
+Just Adults
+```{r}
+adults <- mastersheet_pca[which(mastersheet_pca$Type == "Adult"), ]
+
+adult_pca <-
+  ggplot(data = adults, aes(x = EV1, y = EV2, colour = X..Score)) +
+  geom_point() + 
+  xlim(-0.1, 0.22) + ylim(-0.2, 0.2) +
+  theme_minimal() +
+  labs(colour = "Canopy Cover (%)", title = paste("PCA of Adult Trees (n =", nrow(adults), ")"))
+
+adult_pca
+```
+
+Labels and Repeats
+```{r}
+lab_adult_pca <-
+  ggplot(data = adults, aes(x = EV1, y = EV2, label = Label)) +
+  geom_point() +
+  xlim(-0.1, 0.22) + ylim(-0.2, 0.2) +
+  theme_minimal() +
+  labs(colour = "Canopy Cover (%)") +
+  geom_text(label = adults$Label)
+
+lab_adult_pca <-
+  ggplot(data = adults, aes(x = EV1, y = EV2, colour = Repeat)) +
+  geom_point() +
+  xlim(-0.1, 0.22) + ylim(-0.2, 0.2) +
+  theme_minimal() +
+  labs(colour = "Repeat", title = paste("PCA of Adult Trees (n =", nrow(adults), ")"))
+
+lab_adult_pca
+```
+
+Juvenile
+```{r}
+juveniles <- mastersheet_pca[which(mastersheet_pca$Type %in% c("Intermediate1", "Intermediate2", "Juvenile")), ]
+
+juv_pca <-
+  ggplot(data = juveniles, aes(x = EV1, y = EV2, colour = Score.Rounded)) +
+  geom_point() + 
+  xlim(-0.1, 0.22) + ylim(-0.2, 0.2) +
+  theme_minimal() +
+  labs(colour = "Score" , title = paste("PCA of Juvenile Trees (n =", nrow(juveniles), ")"))
+
+juv_pca
+```
+Intermediate
+```{r}
+intermediates <- mastersheet_pca[which(mastersheet_pca$Type %in% c("Intermediate1", "Intermediate2")), ]
+
+int_pca <-
+  ggplot(data = intermediates, aes(x = EV1, y = EV2, colour = Score.Rounded)) +
+  geom_point() + 
+  xlim(-0.1, 0.22) + ylim(-0.2, 0.2) +
+  theme_minimal() +
+  labs(colour = "Score" , title = paste("PCA of Intermediate Trees (n =", nrow(intermediates), ")"))
+
+int_pca
+```

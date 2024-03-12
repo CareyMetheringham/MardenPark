@@ -1,0 +1,170 @@
+---
+title: "Binned Effect Size"
+---
+```{r}
+library(dplyr)
+library(ggplot2)
+```
+```{r}
+unlinked_sites <-  read.csv("C:/Users/carey/Documents/MardonPark/Data/unlinked_sites.csv")
+adult <- unlinked_sites[which(unlinked_sites$Age == "Adult"),-c(1:3)]+2
+juv <- unlinked_sites[which(unlinked_sites$Age == "Juv"),-c(1:3)]+2
+```
+Get the allele frequencies for adults and juveniles
+```{r}
+allele_frequencies <- data.frame(Site = colnames(adult), JuvFreq = colSums(juv)/453, AdultFreq = colSums(adult)/129)
+head(allele_frequencies)
+```
+```{r}
+plot(allele_frequencies$JuvFreq, allele_frequencies$AdultFreq)
+cor.test(allele_frequencies$JuvFreq, allele_frequencies$AdultFreq)
+```
+
+
+```{r}
+allele_frequencies1 <- read.csv("C:/Users/carey/Documents/MardonPark/Data/allele_frequencies.csv")
+MP_effect_sizes <- read.csv("C:/Users/carey/Documents/MardonPark/Data/MP_effect_sizes.csv")
+```
+
+Join the two
+```{r}
+MP_effect_sizes2 <- data.frame(paste(MP_effect_sizes$CONTIG, MP_effect_sizes$SNP, sep = "_"), MP_effect_sizes$EffectSize)
+colnames(MP_effect_sizes2) <- c("Site","EffectSize")
+```
+
+```{r}
+effect_and_freq <-  merge(MP_effect_sizes2, allele_frequencies, by = "Site")
+effect_and_freq <- data.frame(effect_and_freq,
+                              Diff = (effect_and_freq$JuvFreq - effect_and_freq$AdultFreq),
+                              DiffADJ = (effect_and_freq$JuvFreq - effect_and_freq$AdultFreq)/effect_and_freq$AdultFre)
+```
+Bin the effect sizes
+
+```{r}
+dmean <- c()
+ese <- c()
+
+bins <- 200
+brks <- quantile(effect_and_freq$EffectSize, seq(0,1, length.out = bins+1))
+es_mid <- (brks[-1]+brks[-(bins+1)])/2
+dmean <- rep(0,bins)
+ese <- rep(1, bins)
+for (i in 1:bins) {
+  choice <- effect_and_freq$EffectSize>brks[i] & effect_and_freq$EffectSize<brks[i+1]
+  dmean[i] <- mean(effect_and_freq$Diff[choice])
+  ese[i] <- sd(effect_and_freq$Diff[choice])/sqrt(sum(choice))
+  }
+
+binned_data <- data_frame(MeanEffect = es_mid, MeanChange = dmean)
+```
+```{r}
+af_change_plot_1 <- ggplot(data = binned_data, aes(x = MeanEffect, y = MeanChange/2))+
+  geom_point(shape=21, size = 2, fill = "white")+
+  geom_abline()+
+  theme_minimal()+
+  xlab("Effect size (200 quantiles)")+
+  ylab("Mean change in allele frequency")
+
+af_change_plot_1
+```
+
+```{r}
+effect_and_freq_bin <- effect_and_freq %>% mutate(new_bin = ntile(EffectSize, n=200))
+
+res <- effect_and_freq_bin %>% group_by(new_bin) %>%
+        summarise(Num = n(), MeanEffect = mean(EffectSize,na.rm=TRUE))
+
+res2 <- effect_and_freq_bin %>% group_by(new_bin) %>%
+        summarise(Num = n(), MeanChange = mean((JuvFreq-AdultFreq),na.rm=TRUE))
+
+binned_data <- merge(res, res2, by = "new_bin")
+```
+```{r}
+af_change_plot <- ggplot(data = binned_data, aes(x = MeanEffect, y = MeanChange/2))+
+  geom_point(shape=21, size = 2, fill = "white")+
+  geom_smooth(method = "lm", se=T) +
+  theme_minimal()+
+  xlab("Effect size (200 quantiles)")+
+  ylab("Mean change in allele frequency")
+ # ylim(-0.02, 0.02)+
+ # ggtitle("B")
+
+af_change_plot
+```
+```{r}
+unbinned_plot <- ggplot(data = effect_and_freq, aes(y=Diff, x = EffectSize))+
+  geom_point(pch=".")+
+  #geom_smooth(method = "lm", se=T) +
+  theme_minimal()+
+  xlab("Effect size")+
+  ylab("Change in allele frequency")
+  #ylim(-0.32, 0.32)+
+  #ggtitle("A")
+
+unbinned_plot
+```
+
+```{r}
+pq <- effect_and_freq$JuvFreq*(1- effect_and_freq$JuvFreq)
+lm_effect <- lm(effect_and_freq$Diff~effect_and_freq$EffectSize)
+summary(lm_effect)
+lm_effect_freq <- lm(effect_and_freq$Diff~effect_and_freq$EffectSize*pq)
+summary(lm_effect_freq)
+```
+```{r}
+af <- (effect_and_freq$AdultAlleles+effect_and_freq$JuvAlleles)/(2*575)
+es <- effect_and_freq$EffectSize
+
+maf <- c()
+for (i in 1:nrow(effect_and_freq)){
+  if(af[i]>0.5){
+    maf[i] <- 1-af[i]
+    es[i] <- es
+  }
+  else{
+    maf[i] <- af[i]
+  }
+}
+
+pq <- maf*(1- maf)
+
+diff <- effect_and_freq$Diff
+
+lm1 <- lm(diff~es)
+pred1 <- predict(lm1, newdata = data.frame(es = c(es)))
+plot(pred1, diff, pch=".")
+
+lm2 <- lm(diff~es*pq)
+pred2 <- predict(lm2, newdata = data.frame(es = c(es), pq = c(pq)))
+plot(pred2, diff, pch=".")
+plot(es, pred2, pch=".")
+```
+`Nb I used mean allele frequency over both generations, as I wanted to capture the frequency of alleles in the missing parents.
+
+Nb I don’t use exactly pq x es but the difference is negligible (graph 1)
+
+To explain, if we assume the focal allele has a fitness of 1 in the homozygotes and 1-s in the hets then the change in allele frequency is 
+The deficit in the heterozygotes i.e (2pqs x 1/2) / mean fitness. 
+
+The x 1/2 is because only half the het alleles are the focal allele.  The approximation is assuming mean fitness is 1, which close to true these small fitness effects.
+I used the full formulae for my analysis.
+
+```{r}
+
+```
+
+```{r}
+library(cowplot)
+both_plots <- ggdraw()+
+  draw_plot(unbinned_plot, x = 0, y = 0.5, height = 0.5)+
+  draw_plot(af_change_plot, x = 0, y = 0, height = 0.5)
+
+both_plots
+
+both_plots2 <- ggdraw()+
+  draw_plot(unbinned_plot, x = 0, y = 0, width = 0.5)+
+  draw_plot(af_change_plot, x = 0.5, y = 0, width = 0.5)
+
+both_plots2
+```
+
