@@ -12,7 +12,7 @@ Test if the sites identified as having large effects in the field trial (10) con
 ### pca.R
 Create Extended Data Figure 2
 
-## GEBV_pheno_corr.R
+### GEBV_pheno_corr.R
 Create Extended Data Figure 3
 
 ###  gebv_extremes_plots.Rmd
