@@ -9,7 +9,7 @@ Uses the data in Supplementary Data 1 to create the stacked bar plot in Figure 1
 ### gebv_mp_bglr.R and bayesb_results.R
 Test if the sites identified as having large effects in the field trial (10) contributed to the visually assessed dieback damage at Marden Park, a new genomic prediction was carried out using the BGLR (V1.1)(17) package’s implementation of the BayesB algorithm (50,000 iterations with a burn in of 2000). 
 
-### pca.R
+### pca_plots.Rmd
 Create Extended Data Figure 2
 
 ### GEBV_pheno_corr.R
@@ -23,12 +23,16 @@ Are juvenile GEBVs significantly different from adults
 Accounting for ancestry of juvenile trees by unlinked sites
 
 ### allele_shift_correlation.R
+Correlation of effect size with alle frequency shift
+Based on methods and code by Richard A. Nichols
+Create Figure 3
 
 ### sequoia_pedigree_subset.Rmd 
 Notebook used to estimate most likely parentage using sequoia.  
 
 ###  parent_offspring_allele_shift.R
 Uses effect_sizes.csv, gebv_site_frequencies.csv and related_trees.csv to test if allele frequencies differ from that expected from likely frequency
+
 
 ###  parent_offspring_correlation.R
 Tests and plots correlation of adult GEBV and score with offspring health
