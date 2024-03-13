@@ -30,6 +30,9 @@ Create Figure 3
 ### sequoia_pedigree_subset.Rmd 
 Notebook used to estimate most likely parentage using sequoia.  
 
+Parentage assignment was performed with the sequoia R package (V2.3.1) (19), using a randomly selected set of 1,000 SNPs having read depth > 20, minor allele frequency > 0.4, and an estimated error rate < 0.01. Parentage assignment was run using the hermaphrodite “B” mode. DBH was used to create a proxy for the birth year of adult trees (birth year = 100 - DBH) and juvenile trees were assigned a birth year of 100. This allowed for larger, and therefore presumably older, adult trees to be assigned as parents of younger adult trees, while disallowing juveniles from being considered as parent trees. The maximum age of parents was set as 99, allowing all adult trees to be considered as parents of the juveniles. The proxy years were not intended to be an accurate estimate of tree age. Confidence of parentage assignment was estimated within sequoia by simulating genotype data based on the estimated pedigree, recalculating parentage assignment based upon simulated data and comparing the recalculated pedigree to the original pedigree. The proportion of correct assignments over multiple runs of the process gives an estimate of confidence in our parentage assignments. 
+
+
 ###  parent_offspring_allele_shift.R
 Uses effect_sizes.csv, gebv_site_frequencies.csv and related_trees.csv to test if allele frequencies differ from that expected from likely frequency
 
