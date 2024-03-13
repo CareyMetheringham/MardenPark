@@ -23,8 +23,10 @@ Are juvenile GEBVs significantly different from adults
 Accounting for ancestry of juvenile trees by unlinked sites
 
 ### allele_shift_correlation.R
-Correlation of effect size with alle frequency shift
-Based on methods and code by Richard A. Nichols
+Correlation of effect size with alle frequency shift.
+
+Based on methods and code by Richard A. Nichols.
+
 Create Figure 3
 
 ### sequoia_pedigree_subset.Rmd 
