@@ -1,4 +1,4 @@
-# MardenPark
+# Rapid polygenic adaptation in a wild population of ash trees under a novel fungal epidemic
 
 ## Code and attached data for plot creation and analysis of allele frequency shifts
 C.L.Metheringham and R.A.Nichols
