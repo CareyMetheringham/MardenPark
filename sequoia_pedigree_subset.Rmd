@@ -7,10 +7,7 @@ library(sequoia)
 ```
 Create life history data
 ```{r}
-mp_mastersheet <- read.csv("~/KewStuff/MardenPark/Data/mp_mastersheet.10.03.2022.csv")
-#Filter out samples with poor coverage
-poor_samples <- read.csv(file = "~/KewStuff/MardenPark/Data/poor_sample_list.csv")
-mp_mastersheet <- mp_mastersheet[which(!mp_mastersheet$Label %in% poor_samples$x),]
+mp_mastersheet <- read.csv("phenotypes.csv")
 LH <- data.frame(mp_mastersheet$Label, rep(4, length(mp_mastersheet$Label)), mp_mastersheet$Type)
 colnames(LH) <- c("ID","Sex","birthyear")
 # Code age catagories as dummy birth years
@@ -24,7 +21,7 @@ LH$birthyear <- as.integer(LH$birthyear)
 ```
 Read in a ped file of filtered SNPS - less than 25% missing, low LD, high MAF
 ```{r}
-Geno0 <- GenoConvert(InFile ="~/KewStuff/maf1.pass2.miss25.LD.ped",InFormat="ped")
+Geno0 <- GenoConvert(InFile ="sequoia_filtered_snps.ped",InFormat="ped")
 ```
 ```{r}
 Geno <- as.matrix(Geno0[c(16, 33, 36, 347, 509:514, 518, 570),])
@@ -59,9 +56,10 @@ SummarySeq(SeqOUT)
 #
 # check full sibs, half sibs etc.
 Pairwise<-ComparePairs(SeqOUT$Pedigree,patmat =TRUE)
-#
-# save results: single compressed .RData file, and/or folder with text files
-#save(SeqOUT, Geno, OtherStuff,file="Sequoia_output_date.RData")
-#writeSeq(SeqList =SeqOUT,GenoM =Geno,folder ="Sequoia-OUT")
+```
+Save results: single compressed .RData file, and/or folder with text files
+```{r}
+save(SeqOUT, Geno, OtherStuff,file="Sequoia_output_date.RData")
+writeSeq(SeqList =SeqOUT,GenoM =Geno,folder ="Sequoia-OUT")
 ```
 
