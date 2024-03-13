@@ -1,5 +1,3 @@
-setwd("~/MardonPark/Data")
-
 #Load required modules
 library(vcfR)
 library(BGLR)
@@ -35,7 +33,7 @@ convert_GT <- function(GT, convert_na = F) {
 }
 
 #Get vcf file
-VCF <- read.vcfR("~/MardonPark/Data/selected_snps.maf01.vcf")
+VCF <- read.vcfR("selected_snps.maf01.vcf")
 #Convert to gt matrix
 GT <- convert_GT(extract.gt(VCF, element = "GT"))
 rm(VCF)
@@ -51,7 +49,7 @@ split_id_col <-
     str_split(x, pattern = "_"))
 colnames(GT) <- sapply(split_id_col, "[[", 1)
 
-VCF2 <- read.vcfR("~/MardonPark/Data/maf01.pass3.miss25.snps.only.LD.vcf",
+VCF2 <- read.vcfR("maf01.pass3.miss25.snps.only.LD.vcf",
                   nrows = 100000)
 #Convert to gt matrix
 GT2 <- convert_GT(extract.gt(VCF2, element = "GT"))
@@ -67,7 +65,7 @@ split_id_col <-
 colnames(GT2) <- sapply(split_id_col, "[[", 1)
 
 #into rows, Adult (rows containing adults) Young (rows containing young).
-pheno <- read.csv("~/MardonPark/Data/mp_mastersheet.10.03.2022_tidy_gebv.csv")
+pheno <- read.csv("phenotypes.csv")
 #Use only invividuals with genotype
 pheno <- pheno[which(pheno$Label %in% colnames(GT2)),]
 adults <- pheno[which(pheno$Type =="Adult" & !is.na(pheno$PercentScore_2019)),]
@@ -80,7 +78,7 @@ juvs <- juvs[order(juvs$Label),]
 site_num <- round(nrow(GT))/4
 
 # Get a list of effect sizes and find the sites with the largest absolute effect sizes
-EES <- read.csv("~/MardonPark/Data/new_ees.table_10000", sep="")
+EES <- read.csv("effect_sizes.csv", sep="")
 large_effect <- EES[order((EES$EES.MIA^2), decreasing = T),][1:site_num,]
 large_effect_snps <- paste(large_effect$CONTIG, large_effect$SNP, sep = "_")
 
@@ -138,5 +136,3 @@ snp_effect_tableA[,i] <- fma$ETA[[1]]$b
 
 write.csv(snp_effect_tableA, file = "snp_effect_tableA.csv")
 write.csv(snp_effect_tableJ, file = "snp_effect_tableJ.csv")
-
-
