@@ -10,13 +10,13 @@ library(data.table)
 ```
 Import PCA
 ```{r}
-pca_table<- read.table("~/MardonPark/Data/plink.eigenvec", quote="\"", comment.char="")
+pca_table<- read.table("plink.eigenvec", quote="\"", comment.char="")
 colnames(pca_table)[1:4] <- c("Label","Label2","EV1","EV2")
 ```
 
 Import Mastersheet
 ```{r}
-mp_mastersheet <- read.csv("/users/carey/Documents/MardonPark/Data/mp_mastersheet.csv")
+mp_mastersheet <- read.csv("phenotypes.csv")
 ```
 
 Filter out not included samples
