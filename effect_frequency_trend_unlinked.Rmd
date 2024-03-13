@@ -6,7 +6,7 @@ library(dplyr)
 library(ggplot2)
 ```
 ```{r}
-unlinked_sites <-  read.csv("C:/Users/carey/Documents/MardonPark/Data/unlinked_sites.csv")
+unlinked_sites <-  read.csv("unlinked_sites.csv")
 adult <- unlinked_sites[which(unlinked_sites$Age == "Adult"),-c(1:3)]+2
 juv <- unlinked_sites[which(unlinked_sites$Age == "Juv"),-c(1:3)]+2
 ```
@@ -22,8 +22,8 @@ cor.test(allele_frequencies$JuvFreq, allele_frequencies$AdultFreq)
 
 
 ```{r}
-allele_frequencies1 <- read.csv("C:/Users/carey/Documents/MardonPark/Data/allele_frequencies.csv")
-MP_effect_sizes <- read.csv("C:/Users/carey/Documents/MardonPark/Data/MP_effect_sizes.csv")
+allele_frequencies1 <- read.csv("allele_frequencies.csv")
+MP_effect_sizes <- read.csv("effect_sizes.csv")
 ```
 
 Join the two
