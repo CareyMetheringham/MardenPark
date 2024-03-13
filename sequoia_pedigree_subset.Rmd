@@ -4,9 +4,6 @@ title: "Sequoia"
 
 Filtering SNPs
  with some care taken to filter them on low LD, high MAF, no sex-linkage etc.
- -more MAF filtering needed?
-- sex linkage
-http://www.mikepalmer.co.uk/woodyplantecology/docs/MNR-ashgender.pdf
 
 Test with sim data
 ```{r}
@@ -37,6 +34,7 @@ Real data test
 1. create life history data
 ```{r}
 mp_mastersheet <- read.csv("~/KewStuff/MardenPark/Data/mp_mastersheet.10.03.2022.csv")
+#Filter out samples with poor coverage
 poor_samples <- read.csv(file = "~/KewStuff/MardenPark/Data/poor_sample_list.csv")
 mp_mastersheet <- mp_mastersheet[which(!mp_mastersheet$Label %in% poor_samples$x),]
 LH <- data.frame(mp_mastersheet$Label, rep(4, length(mp_mastersheet$Label)), mp_mastersheet$Type)
@@ -59,9 +57,6 @@ library(sequoia)
 #CheckGeno(Geno)
 # or read in from several other input formats (not .vcf (yet)):
 Geno0 <- GenoConvert(InFile ="~/KewStuff/maf1.pass2.miss25.LD.ped",InFormat="ped")
-#Geno <- GenoConvert(InFile ="~/MardonPark/Data/pruned.filtered.pruned.filtered.annotated_640.ped",InFormat="ped")
-#Geno0 <- GenoConvert(InFile ="~/MardonPark/Data/pruned.filtered.imputed.ped",InFormat="ped")
-#CheckGeno(Geno)
 ```
 ```{r}
 Geno <- as.matrix(Geno0[c(16, 33, 36, 347, 509:514, 518, 570),])
@@ -69,8 +64,6 @@ CheckGeno(Geno)
 ```
 ```{r}
 ## read in lifehistory data: ID-Sex-birthyear, column names ignored
-#LH<-read.table("LifeHistoryData.txt",header=T)
-#
 # duplicate check & parentage assignment (takes few minutes)
 ParOUT<-sequoia(GenoM =Geno, LifeHistData =LH, Module="par", quiet =FALSE, Plot =TRUE, Complex = "full", Herm="A", MaxSibshipSize = 500)
 # (NOTE: from version 2.1 onward,'Module'replaces'MaxSibIter')
