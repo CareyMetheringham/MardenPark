@@ -72,32 +72,3 @@ f_pJ <-  fisher.method(pVals_Juv, p.corr = "none")
 f_pA <- fisher.method(pVals_Adult, p.corr = "none")
 head(f_pA)
 head(f_pJ)
-
-#I think you should be using var.test(candidate_effectsize, control_effectsize)
-
-#It would return the ratio of effect sizes, a confidence interval (most useful for biological interpretation, I think) and a p value
-
-#Here is some dummy data, where the ratio of sds is 3 (variances ratio 9). You can see the true value is in the CI, and p is off the scale.
-
-candidate_e <- rnorm(1000, sd=1.1)
-control_e <- rnorm(1000, sd=1)
-var.test(candidate_e, control_e)
-# 
-# F test to compare two variances
-# 
-# data:  candidate_e and control_e
-# F = 8.6874, num df = 999, denom df = 999, p-value < 2.2e-16 alternative hypothesis: true ratio of variances is not equal to 1
-# 95 percent confidence interval:
-#   7.673547 9.835149
-# sample estimates:
-#   ratio of variances 
-# 8.687374 
-
-
-# pvals <- rep(0,100)
-# 
-# for (j in 1:100) pvals <-  var.test(gebv_effects[,j], control_effects[,j], alternative = 'greater')$p.value
-# 
-# library(metaseqR)
-# fisher.method(pvalues, p.corr = "none") 
-
