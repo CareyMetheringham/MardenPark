@@ -1,37 +1,11 @@
 ---
 title: "Sequoia"
 ---
-
-Filtering SNPs
- with some care taken to filter them on low LD, high MAF, no sex-linkage etc.
-
-Test with sim data
+Load sequoia library
 ```{r}
-# library(sequoia)
-# # load the package#
-# # get the example pedigree and life history data
-# data(Ped_HSg5, LH_HSg5,package="sequoia")
-# tail(Ped_HSg5)
-# # have a look at the data
-# #
-# # simulate genotype data for 200 SNPs; 40% parents non-genotyped
-# GenoSim<-SimGeno(Ped =Ped_HSg5,nSnp =200,SnpError=0.001,ParMis=0.4)
-# ## run sequoia; duplicate check & parentage assignment only at first
-# ParOUT<-sequoia(GenoM =Geno,LifeHistData =LH_HSg5,Module ="par")
-# # (NOTE: From version 2.1 onward,'Module = "par"'replaces'MaxSibIter=0')
-# names(ParOUT)
-# # output: a list with the following elements# [1] "Specs"  "AgePriors"  "LifeHist"  "PedigreePar"  "MaybeParent"# "TotLikParents"## run sibship clustering & grandparent assignment# optional: use parents assigned above (in'ParOUT$PedigreePar')
-# SeqOUT<-sequoia(GenoM =Geno,SeqList =ParOUT,Module ="ped")
-# # (Module='ped'replaces MaxSibIter>0)#
-# # compare the assigned real and dummy parents to the true pedigree
-# chk<-PedCompare(Ped1 =Ped_HSg5,Ped2 =SeqOUT$Pedigree)
-# chk$Counts["TT",,]## save results: single compressed .RData file, and/or folder with text files
-# #save(SeqOUT, Geno, OtherStuff,file="Sequoia_output_date.RData")
-# #writeSeq(SeqList =SeqOUT,GenoM =Geno,folder ="Sequoia-OUT")
+library(sequoia)
 ```
-Real data test
-
-1. create life history data
+Create life history data
 ```{r}
 mp_mastersheet <- read.csv("~/KewStuff/MardenPark/Data/mp_mastersheet.10.03.2022.csv")
 #Filter out samples with poor coverage
@@ -39,6 +13,7 @@ poor_samples <- read.csv(file = "~/KewStuff/MardenPark/Data/poor_sample_list.csv
 mp_mastersheet <- mp_mastersheet[which(!mp_mastersheet$Label %in% poor_samples$x),]
 LH <- data.frame(mp_mastersheet$Label, rep(4, length(mp_mastersheet$Label)), mp_mastersheet$Type)
 colnames(LH) <- c("ID","Sex","birthyear")
+# Code age catagories as dummy birth years
 LH$birthyear[which(LH$birthyear=="Juvenile")] <- as.integer(2005)
 LH$birthyear[which(LH$birthyear=="Intermediate1")] <- as.integer(2004)
 LH$birthyear[which(LH$birthyear=="Intermediate2")] <- as.integer(2003)
@@ -47,34 +22,23 @@ LH$birthyear[which(LH$birthyear=="Unknown")] <- as.integer(-1)
 
 LH$birthyear <- as.integer(LH$birthyear)
 ```
-
-
-
+Read in a ped file of filtered SNPS - less than 25% missing, low LD, high MAF
 ```{r}
-library(sequoia)
-# read in genotype data if already coded as 0/1/2, with missing=-9:
-#Geno<-as.matrix(read.csv("mydata.csv",header=FALSE,row.names=1))
-#CheckGeno(Geno)
-# or read in from several other input formats (not .vcf (yet)):
 Geno0 <- GenoConvert(InFile ="~/KewStuff/maf1.pass2.miss25.LD.ped",InFormat="ped")
 ```
 ```{r}
 Geno <- as.matrix(Geno0[c(16, 33, 36, 347, 509:514, 518, 570),])
 CheckGeno(Geno)
 ```
+Duplicate check & parentage assignment (takes few minutes)
 ```{r}
-## read in lifehistory data: ID-Sex-birthyear, column names ignored
-# duplicate check & parentage assignment (takes few minutes)
 ParOUT<-sequoia(GenoM =Geno, LifeHistData =LH, Module="par", quiet =FALSE, Plot =TRUE, Complex = "full", Herm="A", MaxSibshipSize = 500)
 # (NOTE: from version 2.1 onward,'Module'replaces'MaxSibIter')
-#
 ParOUT$DupGenotype
 # inspect duplicates (intentional or accidental)
 ```
+Polish dataset
 ```{r}
-
-# ..........................................................
-# polish dataset:
 # remove one indiv. from each duplicate pair
 Geno2<-Geno[!rownames(Geno)%in%ParOUT$DupGenotype$ID2,]
 # & drop low call rate samples
@@ -87,8 +51,6 @@ MAF<-ifelse(stats[,"AF"]<=0.5, stats[,"AF"],1-stats[,"AF"])
 Indiv.Mis<-apply(Geno2,1,function(x)sum(x== -9))/ ncol(Geno2)
 Geno2<-Geno2[Indiv.Mis<0.2, ]
 # check histograms for sensible thresholds, iterate if necessary
-#
-# ..........................................................
 # run full pedigree reconstruction (may take up to a few hours)
 SeqOUT<-sequoia(GenoM =Geno2, LifeHistData =LH, Module ="ped",Err =0.001, MaxSibshipSize = 500)
 #
