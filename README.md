@@ -46,12 +46,6 @@ Create Figure 4
 * effect_sizes.csv
 * gebv_site_frequencies.csv
 * related_trees.csv
-* phenotypes.csv
-* sequoia_filtered.ped
 * unlinked_sites.csv
-* selected_snps.maf01.vcf
-* maf01.pass3.miss25.snps.only.LD.vcf
-* maf4.pass3.miss25.snps.only.LD.vcf
-* plink.eigenvec
 
-* See Suppliment 2 for details on simulated analysis
+* See Suppliment 2 for details on simulated analysis and Zenodo for additional files
