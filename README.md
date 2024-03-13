@@ -10,7 +10,7 @@ Uses the data in Supplementary Data 1 to create the stacked bar plot in Figure 1
 Test if the sites identified as having large effects in the field trial (10) contributed to the visually assessed dieback damage at Marden Park, a new genomic prediction was carried out using the BGLR (V1.1)(17) package’s implementation of the BayesB algorithm (50,000 iterations with a burn in of 2000). 
 
 ### pca_plots.Rmd
-Create Extended Data Figure 2
+Create Extended Data Figure 2 from PLINK output
 
 ### GEBV_pheno_corr.R
 Create Extended Data Figure 3
@@ -44,5 +44,12 @@ Create Figure 4
 * effect_sizes.csv
 * gebv_site_frequencies.csv
 * related_trees.csv
+* phenotypes.csv
+* sequoia_filtered.ped
+* unlinked_sites.csv
+* selected_snps.maf01.vcf
+* maf01.pass3.miss25.snps.only.LD.vcf
+* maf4.pass3.miss25.snps.only.LD.vcf
+* plink.eigenvec
 
 * See Suppliment 2 for details on simulated analysis
