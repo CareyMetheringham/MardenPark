@@ -15,35 +15,33 @@ GTJgebv <- gebv_sites[gebv_sites$Age=="Juv", 4:ncol(gebv_sites)]
 new_gebv <- (as.matrix(gebv_sites[,-(1:3)])%*%es) + 1
 
 # Load in phenotype data
-gebv_and_ph <- read.csv("~/University/Marden_Park/Data/mp_mastersheet.10.03.2022_tidy_gebv2.csv")
-# gebv_and_ph_j <- gebv_and_ph[which(gebv_and_ph$Type == "Juvenile"), ]
-# gebv_and_ph_a <- gebv_and_ph[which(gebv_and_ph$Type == "Adult"), ]
+gebv_and_ph <- read.csv("phenotypes.csv")
+gebv_and_ph_j <- gebv_and_ph[which(gebv_and_ph$Type == "Juvenile"), ]
+gebv_and_ph_a <- gebv_and_ph[which(gebv_and_ph$Type == "Adult"), ]
 # 
-# qqnorm(gebv_and_ph_j$GEBV)
-# qqline(gebv_and_ph_j$GEBV)
-# qqnorm(gebv_and_ph_a$GEBV)
-# qqline(gebv_and_ph_a$GEBV)
+qnorm(gebv_and_ph_j$GEBV)
+qqline(gebv_and_ph_j$GEBV)
+qqnorm(gebv_and_ph_a$GEBV)
+qqline(gebv_and_ph_a$GEBV)
 # 
-# qqnorm(gebv_and_ph_j$GEBV[which(gebv_and_ph_j$Height > 0.5)])
-# qqline(gebv_and_ph_j$GEBV[which(gebv_and_ph_j$Height > 0.5)])
+qqnorm(gebv_and_ph_j$GEBV[which(gebv_and_ph_j$Height > 0.5)])
+qqline(gebv_and_ph_j$GEBV[which(gebv_and_ph_j$Height > 0.5)])
 # ```
 # 
-# ```{r}
-# wilcox.test(gebv_and_ph_a$GEBV, gebv_and_ph_j$GEBV)
-# t.test(gebv_and_ph_a$GEBV, gebv_and_ph_j$GEBV)
-# mean(gebv_and_ph_j$GEBV)
-# mean(gebv_and_ph_a$GEBV)
-# ```
-# 
-# 
-# 
-# ```{r}
-# t.test(gebv_and_ph_a$GEBV, gebv_and_ph_j$GEBV[which(gebv_and_ph_j$Height < 0.5)])
-# wilcox.test(gebv_and_ph_a$GEBV, gebv_and_ph_j$GEBV[which(gebv_and_ph_j$Height < 0.5)])
-# t.test(gebv_and_ph_a$GEBV, gebv_and_ph_j$GEBV[which(gebv_and_ph_j$Height >= 0.5)])
-# wilcox.test(gebv_and_ph_a$GEBV, gebv_and_ph_j$GEBV[which(gebv_and_ph_j$Height >= 0.5)])
-# t.test(gebv_and_ph_j$GEBV[which(gebv_and_ph_j$Height >= 0.5)], gebv_and_ph_j$GEBV[which(gebv_and_ph_j$Height < 0.5)])
-# ```
+ ```{r}
+wilcox.test(gebv_and_ph_a$GEBV, gebv_and_ph_j$GEBV)
+t.test(gebv_and_ph_a$GEBV, gebv_and_ph_j$GEBV)
+mean(gebv_and_ph_j$GEBV)
+mean(gebv_and_ph_a$GEBV)
+ ```
+
+ ```{r}
+ t.test(gebv_and_ph_a$GEBV, gebv_and_ph_j$GEBV[which(gebv_and_ph_j$Height < 0.5)])
+ wilcox.test(gebv_and_ph_a$GEBV, gebv_and_ph_j$GEBV[which(gebv_and_ph_j$Height < 0.5)])
+ t.test(gebv_and_ph_a$GEBV, gebv_and_ph_j$GEBV[which(gebv_and_ph_j$Height >= 0.5)])
+ wilcox.test(gebv_and_ph_a$GEBV, gebv_and_ph_j$GEBV[which(gebv_and_ph_j$Height >= 0.5)])
+ t.test(gebv_and_ph_j$GEBV[which(gebv_and_ph_j$Height >= 0.5)], gebv_and_ph_j$GEBV[which(gebv_and_ph_j$Height < 0.5)])
+ ```
 # 
 # 
 # Shape data for boxplots
@@ -143,70 +141,69 @@ gebv_and_ph <- read.csv("~/University/Marden_Park/Data/mp_mastersheet.10.03.2022
 #           heights = c(1.5, 2.2))
 # ```
 # ```{r}
-# adult_loc <- ggplot(data = gebv_and_ph_a, aes(x = Long, y = Lat, size = DBH, colour = GEBV))+
-#   geom_point(xlab="GEBV") +
-#   theme_minimal() +
-#   theme(legend.position="bottom", legend.box = "vertical") +
-#   scale_color_gradient(low = "#fee6ce", high = "#e63f0d") +
-#   labs(colour = "GEBV", size = "DBH (cm)") +
-#   ylim(51.27117, 51.27011) +
-#   xlim(-0.04020264, -0.038833) +
-#   guides(colour = guide_colourbar(order = 1),
-#          size = guide_legend(order = 2))
-# 
-# juv_loc <- ggplot(data = gebv_and_ph_j, aes(x = Long, y = Lat, size = Height, colour = GEBV))+
-#   geom_point() +
-#   theme_minimal() +
-#   theme(legend.position="bottom", legend.box = "vertical") +
-#   labs(colour = "GEBV", size = "Height (m)") +
-#   ylim(51.27117, 51.27011) +
-#   xlim(-0.04020264, -0.038833) +
-#   guides(colour = guide_colourbar(order = 1),
-#          size = guide_legend(order = 2))
-# 
-# ggarrange(adult_loc, juv_loc, 
-#           labels = c("Adults", "Juveniles"),
-#           ncol = 2, nrow = 1)
+adult_loc <- ggplot(data = gebv_and_ph_a, aes(x = Long, y = Lat, size = DBH, colour = GEBV))+
+   geom_point(xlab="GEBV") +
+   theme_minimal() +
+   theme(legend.position="bottom", legend.box = "vertical") +
+   scale_color_gradient(low = "#fee6ce", high = "#e63f0d") +
+   labs(colour = "GEBV", size = "DBH (cm)") +
+   ylim(51.27117, 51.27011) +
+   xlim(-0.04020264, -0.038833) +
+   guides(colour = guide_colourbar(order = 1),
+          size = guide_legend(order = 2))
+ 
+ juv_loc <- ggplot(data = gebv_and_ph_j, aes(x = Long, y = Lat, size = Height, colour = GEBV))+
+   geom_point() +
+   theme_minimal() +
+   theme(legend.position="bottom", legend.box = "vertical") +
+   labs(colour = "GEBV", size = "Height (m)") +
+   ylim(51.27117, 51.27011) +
+   xlim(-0.04020264, -0.038833) +
+   guides(colour = guide_colourbar(order = 1),
+          size = guide_legend(order = 2))
+ 
+ ggarrange(adult_loc, juv_loc, 
+           labels = c("Adults", "Juveniles"),
+           ncol = 2, nrow = 1)
 # ```
 # 
 # Exclude the children of tree 51
 # ```{r}
-# children_of_51 <- related$id[which(related$dam == "S51R" | related$sire == "S51R")]
-# not_51_a <- gebv_and_ph_a[!which(gebv_and_ph_a$Label %in% children_of_51 & gebv_and_ph_a$Label != "S51R"),]
-# not_51_j <- gebv_and_ph_j[!which(gebv_and_ph_j$Label %in% children_of_51),]
-# wilcox.test(gebv_and_ph_a$GEBV, gebv_and_ph_j$GEBV)
-# t.test(gebv_and_ph_a$GEBV, gebv_and_ph_j$GEBV)
+children_of_51 <- related$id[which(related$dam == "S51R" | related$sire == "S51R")]
+not_51_a <- gebv_and_ph_a[!which(gebv_and_ph_a$Label %in% children_of_51 & gebv_and_ph_a$Label != "S51R"),]
+not_51_j <- gebv_and_ph_j[!which(gebv_and_ph_j$Label %in% children_of_51),]
+wilcox.test(gebv_and_ph_a$GEBV, gebv_and_ph_j$GEBV)
+t.test(gebv_and_ph_a$GEBV, gebv_and_ph_j$GEBV)
 # ```
 # 
 # ```{r}
-# juv_gebv <- ggplot(data = gebv_and_ph_j, aes(x = GEBV-1, y = Score_2019, group = Score_2019))+
-#   geom_violin(fill="skyblue")+
-#   theme_minimal()+
-#   ylab(label = "Health Score")+
-#   xlab("GEBV")
-# 
-# adult_gebv <- ggplot(data = gebv_and_ph_a, aes(x = GEBV-1, y = PercentScore_2019))+
-#   geom_point()+
-#   theme_minimal()+
-#   ylab(label = "Canopy Cover (%)")+
-#   xlab("GEBV")
-# 
-# fig2 <- ggarrange(adult_gebv, juv_gebv, 
-#           labels = c("Adults", "Juveniles"),
-#           ncol = 2, nrow = 1)+
-#           xlab("GEBV")
-# 
-# fig2
-# ```
-# ```{r}
-# tiff("/Users/carey/University/Marden_Park/Figures/Final_Figures/mp_ex_data_fig3.tiff", units="mm", width=180, height=100, res=300)
-# fig2
-# dev.off()
-# png("/Users/carey/University/Marden_Park/Figures/Final_Figures/mp_ex_data_fig3.png", units="mm", width=180, height=100, res=300)
-# fig2
-# dev.off()
-# jpeg("/Users/carey/University/Marden_Park/Figures/Final_Figures/mp_ex_data_fig3.jpeg", units="mm", width=180, height=100, res=300)
-# fig2
-# dev.off()
-# ```
-# 
+ juv_gebv <- ggplot(data = gebv_and_ph_j, aes(x = GEBV-1, y = Score_2019, group = Score_2019))+
+   geom_violin(fill="skyblue")+
+   theme_minimal()+
+   ylab(label = "Health Score")+
+   xlab("GEBV")
+ 
+ adult_gebv <- ggplot(data = gebv_and_ph_a, aes(x = GEBV-1, y = PercentScore_2019))+
+   geom_point()+
+   theme_minimal()+
+   ylab(label = "Canopy Cover (%)")+
+   xlab("GEBV")
+ 
+ fig2 <- ggarrange(adult_gebv, juv_gebv, 
+           labels = c("Adults", "Juveniles"),
+           ncol = 2, nrow = 1)+
+          xlab("GEBV")
+ 
+ fig2
+ ```
+ ```{r}
+ tiff("/Users/carey/University/Marden_Park/Figures/Final_Figures/mp_ex_data_fig3.tiff", units="mm", width=180, height=100, res=300)
+ fig2
+ dev.off()
+ png("/Users/carey/University/Marden_Park/Figures/Final_Figures/mp_ex_data_fig3.png", units="mm", width=180, height=100, res=300)
+ fig2
+ dev.off()
+ jpeg("/Users/carey/University/Marden_Park/Figures/Final_Figures/mp_ex_data_fig3.jpeg", units="mm", width=180, height=100, res=300)
+ fig2
+ dev.off()
+ ```
