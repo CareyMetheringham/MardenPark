@@ -33,13 +33,13 @@ Notebook used to estimate most likely parentage using sequoia.
 ###  parent_offspring_allele_shift.R
 Uses effect_sizes.csv, gebv_site_frequencies.csv and related_trees.csv to test if allele frequencies differ from that expected from likely frequency
 
-
 ###  parent_offspring_correlation.R
 Tests and plots correlation of adult GEBV and score with offspring health
+Create Figure 4
 
 ## Data
 * effect_sizes.csv
 * gebv_site_frequencies.csv
 * related_trees.csv
 
-* See Suppliment 2 for simulated analysis
+* See Suppliment 2 for details on simulated analysis
