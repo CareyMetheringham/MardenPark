@@ -27,7 +27,7 @@ Correlation of effect size with alle frequency shift.
 
 Based on methods and code by Richard A. Nichols.
 
-Create Figure 3
+Creates figure 3: To visualize the trend more clearly we grouped the loci into 200 bins (quantiles of gAf(1-f) ). The means of each bin are plotted in with an area of each point being inversely proportional to the variance in f, to convey the relative precision of the mean festimate. The line is the fitted linear regression (carried out on the individual f values). 
 
 ### sequoia_pedigree_subset.Rmd 
 Notebook used to estimate most likely parentage using sequoia.  
