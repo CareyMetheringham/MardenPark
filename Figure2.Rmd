@@ -1,0 +1,153 @@
+---
+title: "Ash manuscript Figure 2A"
+output: html_notebook
+---
+```{r}
+library(ggplot2)
+library(ggbeeswarm)
+library(ggpubr)
+```
+
+
+```{r}
+phenotypes <- read_excel("~/Documents/Ash/Data_S1_phenotyping.xlsx")
+```
+
+```{r}
+filtered_phenotype <- phenotypes[which(phenotypes$Type %in% c("Adult", "Juvenile") & !(is.na(phenotypes$GEBV))),]
+replicates <- c("S31R", "S54R","S67R", "S76R", "S82R", "S223R", "S332Q", "S410Q", "S415R", "S571Q",
+              "S655R", "S868R", "S885R", "S895R", "S901Q", "S925Q", "S928Q", "S939Q", "S954R", "S987Q",
+              "SA", "SB", "SE", "SH", "SJ", "S394C")
+filtered_phenotype <- filtered_phenotype[which(!(filtered_phenotype$Sample %in% replicates)),]
+```
+Violin Plot
+```{r}
+violin <- ggplot(filtered_phenotype, aes(x = Type, group = Type, y = as.numeric(GEBV), fill = Type)) +
+  geom_violin(trim = FALSE) +
+  scale_fill_manual(values = c( "Juvenile" = "skyblue1", "Adult" = "darkorange2")) +
+  geom_boxplot(outlier.shape = NA, width=0.2, fill = "white") +
+  scale_x_discrete(labels = c( "Juvenile" = "Juvenile (n=452)", "Adult" = "Adult (n=128)")) +
+  theme_minimal(base_size=15) +
+  theme(legend.position="none") +
+  labs(title = "A",
+       x = "",
+       y = "GEBV")
+```
+```{r}
+#Save output to file
+tiff("~/Documents/Ash/Figures/2A.tiff", units="mm", width=180, height=100, res=300)
+violin
+dev.off()
+png("~/Documents/Ash/Figures/2A.png", units="mm", width=180, height=100, res=300)
+violin
+dev.off()
+jpeg("~/Documents/Ash/Figures/2A.jpg", units="mm", width=180, height=100, res=300)
+violin
+dev.off()
+```
+
+Box plot with overplotting
+```{r}
+ggplot(filtered_phenotype, aes(x = Type, group = Type, y = as.numeric(GEBV))) +
+  geom_boxplot(outlier.shape = NA, fill = c("darkorange2", "skyblue1")) +  # Draw boxplot without outliers
+  geom_jitter(width = 0.3, alpha = 0.5) +  # Add jittered points
+  scale_x_discrete(labels = c( "Juvenile" = "Juvenile (n=452)", "Adult" = "Adult (n=128)")) +
+  theme_minimal(base_size=15) +
+  labs(title = "A",
+       x = "",
+       y = "GEBV")
+```
+```{r}
+beeswarm <- ggplot(filtered_phenotype, aes(x = Type, group = Type, y = as.numeric(GEBV))) +
+  geom_boxplot(outlier.shape = NA, fill = c("darkorange2", "skyblue1")) +  # Draw boxplot without outliers
+  #geom_beeswarm(cex = 1, alpha = 0.5) +  # Add jittered points
+  scale_x_discrete(labels = c( "Juvenile" = "Juvenile (n=452)", "Adult" = "Adult (n=128)")) +
+  theme_minimal(base_size=15) +
+  labs(title = "A",
+       x = "",
+       y = "GEBV")
+
+beeswarm <- beeswarm + geom_quasirandom()
+```
+
+
+
+
+```{r}
+ggplot(filtered_phenotype, aes(x = Type, group = Type, colour = Type, y = as.numeric(GEBV))) +
+  geom_beeswarm(cex = 2) +  # Add jittered points
+  scale_x_discrete(labels = c( "Juvenile" = "Juvenile (n=452)", "Adult" = "Adult (n=128)")) +
+  scale_colour_manual(values = c( "Juvenile" = "skyblue3", "Adult" = "darkorange2")) +
+  theme_minimal(base_size=15) +
+  theme(legend.position="none") +
+  labs(title = "A",
+       x = "",
+       y = "GEBV")
+```
+```{r}
+juveniles <- as.numeric(filtered_phenotype$GEBV[filtered_phenotype$Type=="Juvenile"])
+juveniles <- juveniles[!is.na(juveniles)]
+adults <- as.numeric(filtered_phenotype$GEBV[filtered_phenotype$Type=="Adult"])
+adults <- adults[!is.na(adults)]
+```
+
+Normality Tests
+```{r}
+ggqqplot(adults)
+ggqqplot(juveniles)
+ggqqplot(c(juveniles,adults))
+shapiro.test(adults)
+shapiro.test(juveniles)
+shapiro.test(c(juveniles,adults))
+```
+
+
+
+
+Statistical test - double check for duplicates
+
+```{r}
+
+t.test(juveniles, adults)
+wilcox.test(juveniles, adults)
+```
+Correlation of height and GEBV in juveniles
+
+```{r}
+juvenile_table <- filtered_phenotype[which(filtered_phenotype$Type=="Juvenile" & filtered_phenotype$Height < 10),]
+```
+
+```{r}
+ggplot(juvenile_table, aes(x = as.numeric(GEBV), y = as.numeric(Height)))+
+    geom_point()+
+    theme_minimal(base_size=15) +
+    theme(legend.position="none") +
+     labs(title = "",
+       x = "GEBV",
+       y = "Height")
+
+cor.test(as.numeric(juvenile_table$GEBV), as.numeric(juvenile_table$Height))
+```
+```{r}
+ggplot(juvenile_table, aes(x = as.numeric(Score_2019), y = as.numeric(Height), group = Score_2019))+
+    geom_boxplot()+
+    theme_minimal(base_size=15) +
+    theme(legend.position="none") +
+     labs(title = "",
+       x = "2019 Score",
+       y = "Height")
+
+cor.test(as.numeric(juvenile_table$Score_2019), as.numeric(juvenile_table$Height))
+```
+```{r}
+ggplot(juvenile_table, aes(x = as.numeric(Score_2021), y = as.numeric(Height),  group = Score_2021))+
+    geom_boxplot()+
+    theme_minimal(base_size=15) +
+    theme(legend.position="none") +
+     labs(title = "",
+       x = "2021 Score",
+       y = "Height")
+
+cor.test(as.numeric(juvenile_table$Score_2021), as.numeric(juvenile_table$Height))
+```
+
