@@ -1,5 +1,5 @@
 ---
-title: "Ash manuscript Figure 2A"
+title: "Ash manuscript Figure 3A"
 output: html_notebook
 ---
 ```{r}
@@ -35,13 +35,13 @@ violin <- ggplot(filtered_phenotype, aes(x = Type, group = Type, y = as.numeric(
 ```
 ```{r}
 #Save output to file
-tiff("~/Documents/Ash/Figures/2A.tiff", units="mm", width=180, height=100, res=300)
+tiff("~/Documents/Ash/Figures/3A.tiff", units="mm", width=180, height=100, res=300)
 violin
 dev.off()
-png("~/Documents/Ash/Figures/2A.png", units="mm", width=180, height=100, res=300)
+png("~/Documents/Ash/Figures/3A.png", units="mm", width=180, height=100, res=300)
 violin
 dev.off()
-jpeg("~/Documents/Ash/Figures/2A.jpg", units="mm", width=180, height=100, res=300)
+jpeg("~/Documents/Ash/Figures/3A.jpg", units="mm", width=180, height=100, res=300)
 violin
 dev.off()
 ```
