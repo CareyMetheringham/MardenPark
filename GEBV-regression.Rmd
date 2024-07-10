@@ -1,0 +1,232 @@
+---
+title: "Allowing for genetic drift"
+author: "Richard Nichols"
+date: "2024-07-09"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r director, echo = FALSE}
+# set working directory to the path to the files of allele frequencies and effect sizes
+# if it is not the current directory, replace "." with the appropriate path
+setwd(".")
+set.seed(4242)
+```
+
+# Analysis of allele frequency change between adults and juveniles
+
+To assess whether the change in GEBV can be attributed to selection rather than genetic drift we adopt two approaches that exploit the genotypes at unlinked sites (sites not used in the GEBV calculations).
+
+Firstly we use these loci to calculate a matrix of relatedness among the pairs of plants. This matrix is then used to predict the GEBV of juveniles, from that of related adults.  The regression between observed and predicted GEBV allows for genetic drift; i.e. the differential success the adults. The action of selection would be apparent in in intercept: a positive intercept would be expected with selection for higher GEBV. This effect would occur if the siblings of the surviving juveniles, which had lower GEBV had succumbed to the fungus.
+
+The second comparison is of the change in allele frequency between adults and juveniles as measured by an F statistic. Any additional changes in allele frequency due to selection would be expected to produce a larger difference between the generations at the GEBV loci, particularly those loci with a larger effect size.
+
+```{r read_data, echo = FALSE}
+
+
+rdat <- read.csv("unlinked_sites.csv")
+
+# get matrix of unlinked loci (+1 to get -1/0/1 format)
+ngmat <- 1 + as.matrix(rdat[,-(1:3)])
+
+
+# Which observations are Adult and Juvenile
+adults <- rdat$Age == "Adult"
+juveniles <-  rdat$Age == "Juv"
+
+
+# Calculate allele frequencies for Adults and Juveniles
+afreq <- colMeans(ngmat[adults,] + 1)/2
+jfreq <- colMeans(ngmat[juveniles,] + 1)/2
+
+```
+
+# Calculating the predicted GEBV of the juveniles
+
+The additive relationship matrix A is calculated from the genotypes at the unlinked loci (ngmat), which is then used to calculate the expected GEBV of the offspring.
+
+The regression of observed and expected GEBV is highly significant, and has a highly significant positive intercept, consistent with selection in favour of high GEBV scores.
+
+
+```{r predict, echo = TRUE}
+library(rrBLUP)
+library(MASS)
+
+# set number of iterations for F null distribution calculations (e.g. 1e4 for higher accuracy)
+nits <- 3e3
+
+# Calculate the relationship matrix using the rrBLUP function ngmat
+A <- A.mat(ngmat)
+
+# Standardize breeding values to have mean of zero in adults
+bvs <- rdat$GEBV - mean(rdat$GEBV[adults])
+
+sigma_adult <- A[adults,adults]
+bv_adult <- bvs[adults]
+bv_juv <- bvs[juveniles]
+
+# Calculate predictions using the MASS function solve
+predn <- t(A[adults,juveniles]) %*% solve(sigma_adult) %*% bv_adult 
+
+# plot observations against predictions
+plot(predn, bv_juv,
+     xlab = "Juvenile GEBV scores predicted from ancestry",
+     ylab = "GEBV scores")
+abline(0,1, lty = 2)
+
+# Calculate regression
+mod1 <- lm(bv_juv ~ predn)
+summary(mod1)
+
+abline(mod1,col = "blue")
+```
+
+# Comparing changes in allele frequency between generations at GEBV and unlinked loci
+
+The change in allele frequencies between adults and offspring is quantified by the F statistic, ∆p/p(1-p). Because the sampling distribution will depend on the pattern of linkage disequilibrium and allele frequency spectrum it is calculated empirically by randomizing the allocation of individuals to adult and juvenile categories (by the function nulldist).
+
+The F estimate for the unlinked loci is very small, F = 0.0007 (SE:0.00011), indicating minimal genetic drift between the generations.  The putatively selected loci, have a four times larger change between the generations, F = 0.0028 (SE:0.00043) which is significantly different (P = 0.0003). Furthermore, the value weighted by effect sizes is nine times larger again, F = 0.026 (SE: 0.015)  which is a significant increase (P = 0.043). These larger changes at the GEBV loci are consistent with the other evidence of polygenic selection.
+
+```{r functions, echo = FALSE}
+# Function to calculate raw adult:juvenile F
+Fcalc <- function(gmat,
+                    adults,
+                    juveniles,
+                    weights = rep(1/dim(gmat)[2], dim(gmat)[2])
+                    ){
+  # Get allele frequencies of adults and offspring and all
+  afreq <- colMeans(gmat[adults,] + 1)/2
+  jfreq <- colMeans(gmat[juveniles,] + 1)/2
+  tfreq <- colMeans(gmat + 1)/2
+  return(F <- sum(weights * 
+                    (jfreq - afreq)^2/tfreq/(1-tfreq)
+                    ))
+}
+
+
+# Function to calculate the null distribution of F values
+nulldist <- function(gmat,   # a matrix of genotypes in {-1,0,1 format}
+                     adults, # a boolean vector identifying the rows corresponding to adults  
+                     wts = rep(1/dim(gmat)[2], dim(gmat)[2]), # weighting for each locus
+                     nreps = 1e3){
+  # find number of adults + juveniles
+  ntrees = length(adults)
+  
+  fdist <- rep(0,nreps)
+  for (i in (1:nreps)) {
+    # randomize the adult / juvenile classification
+    radult <- sample(adults, ntrees)
+    fdist[i] <- Fcalc(gmat = gmat,
+                        adults = radult,
+                        juveniles = !radult, 
+                        weights = wts
+                      )
+    }
+
+  return(fdist)
+}
+
+```
+
+
+```{r calculateF, echo = TRUE}
+# Calculate the observed value for the unlinked loci
+unlinked_f <- Fcalc(ngmat, adults, juveniles)
+
+unlinked_dist <- nulldist(ngmat, adults, nreps = nits)
+
+# Adust raw F for sampling error
+unlinked_f_adj <- unlinked_f - mean(unlinked_dist)
+
+# get SE
+unlinked_f_SE <- sd(unlinked_dist)
+
+noquote(paste0("F:",
+       format(unlinked_f_adj, digits = 2, scientific = FALSE),
+       " (SE:",
+       format(unlinked_f_SE, digits = 2, scientific = FALSE),
+       ")")
+       )
+
+# Obtain P value comparing the difference in F values to the difference in the null distributions
+
+```
+
+
+```{r GEBV_data_input, echo = FALSE}
+# do the same for the GEBV loci
+
+# Read in the GEBV data
+gebvdat <- read.csv("gebv_sites.csv")
+gebvmat <- as.matrix(gebvdat[-(1:3)] - 1)
+gebvadults <- gebvdat$Age == "Adult"
+gebvjuvs <- gebvdat$Age == "Juv"
+
+# Get the effect sizes 
+esizes <- read.csv("MP_effect_sizes.csv")
+evals <- esizes$EffectSize
+relative_evals <- evals/sum(evals)
+```
+
+
+
+```{r GEBV_F-calc, echo = TRUE}
+
+# Calculate the observed value for the unlinked loci
+GEBV_f <- Fcalc(gebvmat, gebvadults,gebvjuvs)
+
+GEBV_f_dist <- nulldist(gebvmat, gebvadults, nreps = nits)
+
+# Adust raw F for sampling error
+GEBV_f_adj <- GEBV_f - mean(GEBV_f_dist)
+
+# get S3
+GEBV_f_SE <- sd(GEBV_f_dist)
+
+noquote(paste0("F:",
+       format(GEBV_f_adj, digits = 2, scientific = FALSE),
+       " (SE:",
+       format(GEBV_f_SE, digits = 2, scientific = FALSE),
+       ")")
+       )
+rawdiff <- GEBV_f - unlinked_f
+pval <- sum((GEBV_f_dist - unlinked_dist) >= rawdiff)/length(unlinked_dist)
+
+noquote(paste0("P = ",
+       format(pval, digits = 2, scientific = FALSE))
+       )
+
+# Do the same calculation for the GEBV sites but weighted by the effect sizes for each locus
+
+# Calculate the observed value for the unlinked loci
+GEBV_fw <- Fcalc(gebvmat, gebvadults, gebvjuvs,
+                   weights = relative_evals 
+                    )
+
+GEBV_f_distw <- nulldist(gebvmat, gebvadults, wts = relative_evals, nreps = nits)
+
+# Adust raw F for sampling error
+GEBV_f_adjw <- GEBV_fw - mean(GEBV_f_distw)
+
+# get S3
+GEBV_f_SEw <- sd(GEBV_f_distw)
+
+noquote(paste0("F:",
+       format(GEBV_f_adjw, digits = 2, scientific = FALSE),
+       " (SE:",
+       format(GEBV_f_SEw, digits = 2, scientific = FALSE),
+       ")")
+       )
+rawdiff <- GEBV_fw - GEBV_f
+pval <- sum((GEBV_f_distw - GEBV_f_dist) >= rawdiff)/length(unlinked_dist)
+
+noquote(paste0("P = ",
+       format(pval, digits = 2, scientific = FALSE))
+       )
+
+```
