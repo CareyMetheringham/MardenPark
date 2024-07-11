@@ -1,0 +1,147 @@
+---
+title: "Related Trees"
+---
+Code used to create Figure 2
+
+```{r}
+library(readxl)
+```
+
+Import data
+```{r}
+related <- read.csv("~/Documents/Ash/related_trees.csv", sep=",")
+phenotypes <- read_excel("~/Documents/Ash/Data_S1_phenotyping.xlsx")
+filtered_phenotype <- phenotypes[which(phenotypes$Type %in% c("Adult", "Juvenile") & !(is.na(phenotypes$GEBV))),]
+replicates <- c("S31R", "S54R","S67R", "S76R", "S82R", "S223R", "S332Q", "S410Q", "S415R", "S571Q",
+              "S655R", "S868R", "S885R", "S895R", "S901Q", "S925Q", "S928Q", "S939Q", "S954R", "S987Q",
+              "SA", "SB", "SE", "SH", "SJ", "S394C")
+pheno <- filtered_phenotype[which(!(filtered_phenotype$Sample %in% replicates)),]
+colnames(pheno)[1] <- "Sample"
+```
+
+Count the number of offspring(sire or dam) per parent tree
+```{r}
+num_offspring <- table(c(related$dam, related$sire))
+num_offspring_tab <- data.frame(num_offspring)
+colnames(num_offspring_tab) <- c("Parent", "Num_Offspring")
+```
+
+Get scores of offspring
+```{r}
+offspring <- pheno[which(pheno$Sample %in% related$id),]
+
+scores_per_parent <- data.frame(names(num_offspring), 0)
+colnames(scores_per_parent) <- c("Parent", "Offspring_Score")
+for(parent in scores_per_parent$Parent){
+  my_offspring <- related[which(related$dam==parent | related$sire==parent),]
+  offspring_pheno_score <- as.numeric(pheno[which(pheno$Sample %in% my_offspring$id),]$Score_2019)
+  if(length(offspring_pheno_score)==1){
+    scores_per_parent[scores_per_parent$Parent==parent,]$Offspring_Score <- offspring_pheno_score
+  }
+  else{
+      mean_score <- mean(offspring_pheno_score, na.rm = TRUE)
+  scores_per_parent[scores_per_parent$Parent==parent,]$Offspring_Score <- mean_score
+  }
+}
+```
+
+```{r}
+gebv_per_parent <- data.frame(names(num_offspring), 0)
+colnames(gebv_per_parent) <- c("Parent", "Offspring_GEBV")
+for(parent in gebv_per_parent$Parent){
+  my_offspring <- related[which(related$dam==parent | related$sire==parent),]
+  offspring_pheno_score <- pheno[which(pheno$Sample %in% my_offspring$id),]$GEBV
+  if(length(offspring_pheno_score)==1){
+    gebv_per_parent[gebv_per_parent$Parent==parent,]$Offspring_GEBV <- offspring_pheno_score
+  }
+  else{
+      mean_score <- mean(offspring_pheno_score, na.rm = T)
+  gebv_per_parent[gebv_per_parent$Parent==parent,]$Offspring_GEBV <- mean_score
+  }
+}
+```
+
+
+```{r}
+parents <- pheno[which(pheno$Sample %in% names(num_offspring)),]
+parent_health <- data.frame(parents$Sample, parents$DBH, parents$PercentScore_2019, parents$PercentScore_2021, parents$GEBV)
+colnames(parent_health) <- c("Parent", "DBH", "Percent_2019", "Percent_2021", "GEBV")
+```
+Merge tables
+
+```{r}
+parent_data <- merge(parent_health, num_offspring_tab, by = "Parent")
+parent_data <- merge(parent_data, scores_per_parent, by = "Parent")
+parent_data <- merge(parent_data, gebv_per_parent, by = "Parent")
+```
+Merge with GEBV data
+
+```{r}
+cor.test(parent_data$GEBV, parent_data$Num_Offspring)
+cor.test(as.numeric(parent_data$Percent_2019), parent_data$Num_Offspring)
+```
+GEBV vs juv scores
+```{r}
+plot(parent_data$GEBV, parent_data$Offspring_Score)
+cor.test(as.numeric(parent_data$GEBV), as.numeric(parent_data$Offspring_Score))
+
+ggplot(data = parent_data, aes(x = GEBV, y = Offspring_Score))+
+  geom_point() +
+  geom_smooth(method=lm) +
+  theme_minimal() +
+  labs(y = "Mean Offspring Score", x = "GEBV of Parent Tree")
+
+```
+
+```{r}
+library(weights)
+plot(parent_data$GEBV, parent_data$Offspring_Score)
+wtd.cor(as.numeric(parent_data$Offspring_Score), as.numeric(parent_data$GEBV), weight = parent_data$Num_Offspring)
+
+gebv_plot <- ggplot(data = parent_data, aes(x = GEBV, y = Offspring_Score, size = Num_Offspring))+
+  geom_point(show.legend = FALSE) +
+  geom_smooth(method = "lm") +
+  theme_minimal() +
+  labs(y = "Mean Offspring Score", x = "GEBV of Parent Tree", size = "Number of Offspring")+
+  theme(legend.position="none")
+
+gebv_plot
+```
+
+```{r}
+library(weights)
+plot(parent_data$Percent_2019, parent_data$Offspring_Score)
+wtd.cor(parent_data$Offspring_Score, parent_data$Percent_2019, weight = parent_data$Num_Offspring)
+
+canopy_plot <- ggplot(data = parent_data, aes(x = Percent_2019, y = Offspring_Score, size = Num_Offspring))+
+  geom_point(show.legend = FALSE) +
+  geom_smooth(method = "lm") +
+  theme_minimal() +
+  labs(y = "Mean Offspring Score", x = "Canopy Cover of Parent Tree (%)", size = "Number of Offspring")+
+theme(legend.position="bottom")
+
+canopy_plot
+```
+
+```{r}
+library(ggpubr)
+fig2 <- ggarrange(gebv_plot, canopy_plot,
+          labels = c("A", "B"),
+          ncol = 1, nrow = 2)
+
+fig2
+```
+```{r}
+#Save output to file
+tiff("~/Documents/Ash/Figures/Fig2.tiff", units="mm", width=180, height=200, res=300)
+fig2
+dev.off()
+png("~/Documents/Ash/Figures/Fig2.png", units="mm", width=180, height=200, res=300)
+fig2
+dev.off()
+jpeg("~/Documents/Ash/Figures/Fig2.jpg", units="mm", width=180, height=200, res=300)
+fig2
+dev.off()
+```
+
+
