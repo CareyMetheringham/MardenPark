@@ -1,0 +1,447 @@
+---
+title: "Simulated selection analysis"
+author: "Richard Nichols"
+date: "2023-02-08"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r director, echo = FALSE}
+# set working directory to the path to the files of allele frequencies and effect sizes
+# if it is not the current directory, replace "." with the appropriate path
+setwd(".")
+
+```
+
+# Parameter values
+
+The parameters values in these simulations were chosen to match the real data for the two studies:
+  A) The field trial used to estimate the effect sizes contributing susceptibility to Ash Dieback by pool-sequencing.
+  B) The comparison of allele frequencies in adults and juveniles in a natural population affected by Ash Dieback.
+  
+The parameters include the number of loci, the number of trees in each study and the size of the pools 
+
+```{r creating_genomes, echo=TRUE}
+
+
+
+# Data about the genomes in the simulation
+
+nrloci <- 7985              # number selected loci # 7,985 was the number estimated in reality
+
+
+# Field-trial experiment: details of the pools
+nsamples <- 15              # number of pairs of pool samples 
+ssize <- 40                 # number of trees in each pool
+tssize <- nsamples * ssize
+
+# Field trial: the proportion of trees in the pools  1300/38784 trees.
+# Converting this proportion to quantiles gives
+lo <- 1300/38784/2          # lower quantile
+hi <- 1-lo                  # upper quantile
+
+# Field trial: the number of trees that need to be
+# simulated to generate ~50 in each tail
+ntrees <- round(1/lo*50)
+
+# Natural population: number of individual trees
+nadult <- 125               # adults
+njuv <- 450                 # Juveniles
+
+```
+
+# Allele frequencies and effect sizes
+
+The allele frequencies and effect sizes were chosen to match those estimated from the real data.
+
+```{r EffectSizes, echo=FALSE}
+
+# read in data frame for wild allele frequencies from allele_frequencies.csv
+wildpdf <- read.csv('allele_frequencies.csv')
+
+with(wildpdf, {
+  par(mfrow = c(1,2))
+  hist(AdultFreq/2,
+       main = 'Adult Allele Frequencies',
+       breaks = seq(0,1,by = 0.05))
+  hist(JuvFreq/2,
+       main = 'Juvenile Allele Frequencies',
+       breaks = seq(0,1,by = 0.05))
+  par(mfrow = c(1,1))
+     })
+
+neutralloci <- read.table("NeutralFreqs.csv")
+
+
+
+adultp <- wildpdf$AdultFreq
+nsloci <- length(adultp)
+pvals <- with(wildpdf, (JuvFreq*JuvAlleles + AdultFreq*AdultAlleles)/(AdultAlleles+JuvAlleles)/2)
+
+# First read in empirical estimates effect sizes from MP_effects_MIA_and_MAA
+
+esizesdf <- read.csv('MP_effect_sizes.csv')
+esizes <- esizesdf$EffectSize
+hist(esizes, main = 'Effect sizes', breaks = 20)
+```
+# Simulation of study A
+
+The pool sequencing experiment was based on the comparison of allele frequencies between two types of pool: upper pools which comprised 40 individuals showing the least damage from ash dieback, and the lower pools of 40 individuals showing the worst damage.
+
+The first step was to estimate the criteria for being in one of these pools. For this purpose, an initial sample of individuals (ntrees = 2,983) were simulated from the allele frequency distribution, and their phenotypes calculated from the effect sizes -  the phenotype is a latent variable describing susceptibility to Ash Dieback. In addition to the genetic contribution, random enviromental variation was added to the phenotype, sufficient to give a heritability of 0.4 (corresponding to field estimates). This phenotypic distribution was used to identify the quantiles (values of the phenotype) such that an appropriate proportion of the genotypes fell into the upper and lower pools, to match those in the real experiment.
+
+The second step was to repeatedly simulate new genotypes, until sufficient members were generated to fill up the lower and upper pools.
+
+The allele frequencies in the pools were then calculated from the genotypes of these trees, and these values processed by the rrBLUP mixed.solve algorithm in the same way as the real data to estimate the effect sizes.
+
+```{r Simulate_data}
+
+set.seed(42)
+
+# Select the initial genotypes  as the first step
+gmat <- sapply(pvals,function(x) rbinom(ntrees,2,x))
+
+# convert genotypes to -1,0,1 format
+gmat2 <- gmat -1
+
+# generate breeding values for each individual as the product of the individuals' allele frequency and effect size
+bv <- gmat2%*%esizes
+
+# Calculate the environmental variation needed to give a heritability of h=0.4
+Ve <- var(bv)*0.6/0.4
+
+# Generate a phenotype by adding a random environmental effect to the breeding value
+ph <- bv + rnorm(ntrees, sd = sqrt(Ve))
+
+# find highest and lowest quantiles of these phenotypes
+qhi <- quantile(ph, hi)
+qlo <- quantile(ph, lo)
+
+
+# create blank genotype matrixes for individuals in the hi and lo pools
+lomat <- himat <- matrix(0,nrow = tssize, ncol = nrloci)
+
+# Create random genotypes and then see if they fall into either the higher or lower tail
+for (i in 1:tssize) {
+  # Generate an empty genotype to start
+  trialvector <- rep(0,nrloci)
+    # repeat this step until a phenotype in the lower tail is produced
+    while ((sum((trialvector -1) * esizes[1:nrloci]) + rnorm(1, sd = sqrt(Ve))) > qlo ) {
+      # create a random genotype 
+      trialvector <- rbinom(n = nrloci, size = 2, prob = pvals )}
+  # store the newly created genotype in a lower pool
+  lomat[i,] <- trialvector
+    # repeat this step until a phenotype in upper tail is produced
+    while ((sum((trialvector-1) * esizes[1:nrloci]) + rnorm(1, sd = sqrt(Ve))) < qhi ) {
+      # create a random genotype
+      trialvector <- rbinom(n = nrloci, size = 2, prob = pvals )}
+  # store the newly created genotype in an upper pool
+  himat[i,] <- trialvector
+  
+  }
+
+# calculate individual allele frequencies € {0,0.5,1} in high and low pools
+himat <- himat / 2
+lomat <- lomat / 2
+
+
+# set up factor with a number for each pair of pools (one hi one lo)
+pool <- factor(rep(1:nsamples, each = ssize))
+
+hilof <- NULL
+# calculate and store the pool mean frequencies
+for (i in levels(pool)) {
+  himean<- colMeans(himat[pool==i,])
+  lomean <- colMeans(lomat[pool==i,])
+  mmmean <- (himean+lomean)/2
+  himean <- himean - mmmean
+  lomean <- lomean - mmmean
+  hilof <- rbind(hilof,himean,lomean)
+  }
+
+# Create a variable to distinguish the hi (1) and lo (-1) pools
+phenotypes <- rep(c(1,-1), nsamples )
+
+# Calculate the relative effect sizes as was done for the real data, then plot true vs inferred effect sizes
+library(rrBLUP)
+mod1 <- mixed.solve(phenotypes,
+                    Z = hilof,
+                    SE = FALSE)
+```
+
+# Estimation of effect sizes
+
+Since this is simulated data, we know both the true values of their effect sizes and their estimates.  The plot of true vs estimated effects shows that the relative effect sizes at individual loci are estimated convincingly with Bayesian shrinkage, albeit with some error. The plot of true vs estimated breeding value (the sum of effects acting on each simulated tree) is strongly correlated. 
+
+The error in the individual estimates of effect sizes is appreciable, but when the effects at multiple loci are summed, they allow for accurate genomic prediction as shown by the plot of true vs estimated breeding value.
+
+```{r Ploting, echo=FALSE}
+
+eesizes <- mean(esizes) + (mod1$u - mean(mod1$u)) * sd(esizes) / sd(mod1$u)
+
+mod2 <- lm(eesizes ~ esizes)
+
+r2val <-round(cor(esizes, eesizes)^2,2)
+
+plot(esizes, eesizes,
+     pch = '.',
+     xlab = "Effect Sizes",
+     ylab = "Estimated Effect Sizes (standardised)",
+     main = parse(text = paste0("'True  vs estimated effect size,'","~ r^2 ==",r2val))
+     )
+ abline(mod2)    
+ 
+plot(esizes, eesizes - esizes, pch = '.',
+     main = 'Baysian shrinkage in effect size estimates',
+     xlab = 'True effect size',
+     ylab = 'Deviation in the estimate')
+
+
+
+truebv <- gmat2 %*% esizes * 2
+estmbv <- gmat2 %*% eesizes * 2
+r2 <- round(cor(truebv, estmbv)^2,2)
+# r2
+
+plot(truebv, estmbv,
+     pch = '.',
+     xlab = "True Breeding value",
+     ylab = "Estimated Breeding value",
+     main = parse(text = paste0("'True  vs estimated breeding value,'","~ r^2 ==",r2))
+     )
+
+abline(lm(estmbv ~ truebv))
+
+
+
+```
+
+
+# Simulating experiment B: using the correlation between effect size and change in allele frequency to demonstrate selection
+
+Although there is error on the individual effect size estimates, a regression across thousands of loci demonstrates the expected relationship between effect size and the change in allele frequency  under selection ( change ∝ p(1-p)e, where e is the effect size), is highly significant.
+
+We find that truncation selection at the 26% quantile reproduces the changes in allele frequency comparable to those detected in the real data
+
+
+```{r Selection in the wild, echo=FALSE}
+
+
+# Now do 26% truncation selection on the gmat phenotypes
+
+# first find the cut-off point for selection
+coff <- quantile(ph, 0.4) 
+
+# select 125 adults without selection
+options <- 1:length(ph)
+adultchoice <- sample(options, size = nadult)
+
+# select juveniles that survive selection, i.e. with phenotypes above the cutoff (njuv is 450, the number scored in reality)
+juvchoice <- sample(options[-c(adultchoice, which(ph<coff)) ], size = njuv)
+
+# Get allele frequencies and their means
+pmat <- gmat/2
+estp <- colMeans(pmat)
+
+# calculate frequency difference between juveniles and adult
+pjuv <- colMeans(pmat[juvchoice,])
+padult <- colMeans((pmat[adultchoice,]))
+
+# transform the observed and real effect sizes to a standard normal
+# estimated_e <- mod1$u/sd(mod1$u)
+# actual_e <- esizes[1:nrloci]/sd(esizes[1:nrloci])
+
+# calculate the y: the change in allele frequency between parents and offspring
+# and x: p(1-p)e
+yvals <- (pjuv - padult)[1:nrloci]
+xvals <- (estp*(1-estp)*esizes)[1:nrloci]
+
+mod3 <- lm(yvals~xvals)
+summary(mod3)
+
+
+```
+
+To visualise the noisy data loci with adjacent effect sizes have been pooled (50 in each pool). Larger symbols indicate points with greater weight (the area is inversely related to the variance in y)
+
+```{r Plot results of selection in the wild, echo=FALSE}
+
+# To visualise the noisy trend find divisions of x containing equal numbers of adjacent points, which will be averaged
+xbreaks <- quantile(xvals, 0:200/200)
+
+# create variables to contain the summary datas
+shortx <- shorty <- yvar <- rep(0,200)
+
+# cacluate the means of xvals and yvals for each group
+for (i in 1:200){
+  lower <- i
+  upper <- i+1
+  choice <- (xvals >= xbreaks[lower]) & (xvals < xbreaks[upper])
+  shortx[i] <- mean(xvals[choice])
+  shorty[i] <- mean(yvals[choice])
+  yvar[i] <- var(yvals[choice])
+}
+
+
+symbsize <-sqrt(1/yvar)/mean(sqrt(1/yvar))
+plot(shortx,shorty,
+     cex = symbsize,
+     xlab = 'Estimate of pqs',
+     ylab = 'Change in allele frequency',
+     main = "Allele frequency change in simulated data")
+
+mod3 <- lm(yvals~xvals)
+abline(mod3)
+```
+
+# Simulating experiment B: the juveniles have higher GEBV than would be predicted from their ancestry
+
+A second demonstration of the action of selection is the higher than expected GEBV in the juveniles. This trend could be explained if the juveniles with lower GEBV had been eliminated by selection, whilst their better adapted siblings survived to be genotyped. Where one or more parents could be identified, the distribution of expected genotypes could be calculated using Mendelian principles, and the average GEBV obtained. The observed GEBV was significantly higher than this expectation. 
+
+This approach was not possible for the majority of juveniles where parents could not be unambiguously allocated. As an alternative their expected GEBV was calculated using an analogous approach. A set of neutral loci, unlinked to the selected loci, were used to predicted GEBV by exploiting the relatedness to the different members of the ancestral generation.
+
+This simulation uses the observed genotypes in these unlinked loci to calculate a relationship matrix, to mimic the regression analysis on the observed data when the breeding value is estmated with error.
+
+First we compensate for this error in calculating heritability of the underlying latent variable. This heritability value is then used to simulate the response of the latent variable to different degrees of selection and the effect selection on the regression between predicted and observed GEBV in juveniles. A regression of the intensity of truncation selection on the change in intercept gives an estimate of 14-31% selective mortality (using our estimate, or a heritablity of 40%).
+
+The regression for survivors of 31% selected mortality is illustrated, showing only minor deviation from a slope of 1, due to the relatively even distribution of mortality (red points) over the predicted GEBV range.
+
+```{r read neutral loci, echo = FALSE}
+# Read in observed matrix distribution of unlinked sites
+rdat <- read.csv("unlinked_sites.csv")
+
+# get matrix of unlinked loci (+1 to get -1/0/1 format)
+ngmat <- 1 + as.matrix(rdat[,-(1:3)])
+
+adults <- rdat$Age == "Adult"
+juveniles <-  rdat$Age == "Juv"
+
+bvs <- rdat$GEBV - mean(rdat$GEBV[adults])
+
+```
+
+```{r Adding neutral loci}
+library(MASS)
+
+
+# obtain estimated breeding values which have ) r^2 = 0.36 with true values 
+ebvs <- bvs + rnorm(length(bvs),
+                    sd = sd(bvs) * sqrt(0.64/0.36))
+
+# Check the r^2
+noquote(paste0("Simulated r^2 between real & estimated breeding values: ", format(cor(bvs,ebvs)^2, digits = 2, scientific = FALSE))
+        )
+
+# express the values as difference from the adult mean (as in the real analysis)
+ebvs <- ebvs - mean(ebvs[adults])
+
+# conduct truncation selection of same order as in our real heritability estimate 
+# to show heritability is underestimated
+hvalues <- seq(0.2,0.6,length.out = 1000)
+
+h_estimate <- rep(0,1000)
+for (i in 1:1000){
+  h = hvalues[i]
+  Ve <- var(bvs)*(1 - h)/h
+  phenotype <- bvs + rnorm(length(bvs), sd = sqrt(Ve))
+  cutoff <- quantile(phenotype,1/6)
+  seln <- (mean(phenotype[phenotype < cutoff])  - mean(phenotype)) / sd(phenotype)
+  resp <- (mean(ebvs[phenotype < cutoff]) - mean(ebvs)) / sd(ebvs)
+  h_estimate[i] <- resp/seln
+  }
+
+plot(h_estimate, hvalues,
+     main = "Demonstration of under-estimation of heritability
+     when breeding value is estimated with error",
+     ylab = "True heritability",
+     xlab = "Estimated heritability")
+
+mod4 <- lm(hvalues ~ h_estimate)
+abline(0,1, lty = 2)
+abline(mod4, col = "blue")
+cm <- coef(mod4)
+noquote(paste0("Updated heritability estimate: ",
+               format(cm[1] + 0.21 * cm[2], digits = 2, scientific = FALSE))
+        )
+
+# Calculate the relationship matrix using the rrBLUP function ngmat
+A <- A.mat(ngmat)
+
+
+sigma_adult <- A[adults,adults]
+bv_adult <- bvs[adults]
+bv_juv <- bvs[juveniles]
+
+# Calculate predictions using the MASS function solve
+predn <- t(A[adults,juveniles]) %*% solve(sigma_adult) %*% bv_adult 
+
+mod1 <- lm(bv_juv ~ predn)
+
+# Calculate a distribution before selection
+bv0 <- bv_juv - coef(mod1)[1]
+
+# Generate the true breeding values (0.36 r^2 with estimates)
+bvtrue <- bv0 + rnorm(length(bv0),
+                    sd = sd(bv0) * sqrt(0.64/0.36))
+
+
+# Create a phenotype with h^2 of 0.24 and the true bvs
+h = 0.24
+Ve <- var(bvtrue)*(1 - h)/h
+pheno24 <- bvtrue + rnorm(length(bvtrue), sd = sqrt(Ve))
+
+# Do the same for an h^2 of 0.4
+h = 0.40
+Ve <- var(bvtrue)*(1 - h)/h
+pheno40 <- bvtrue + rnorm(length(bvtrue), sd = sqrt(Ve))
+
+# for different levels of selection find the expected shift in intercept 
+seln <- seq(0.2, 0.5, length.out = 1000)
+resp24 <- rep(0, 1000)
+resp40 <- rep(0, 1000)
+for (i in 1:1000){
+  cut24 <- quantile(pheno24, seln[i])
+  cut40 <- quantile(pheno40, seln[i])
+  resp24[i] <- coef(lm(bv0[pheno24>cut24] ~ predn[pheno24>cut24]))[1]
+  resp40[i] <- coef(lm(bv0[pheno40>cut40] ~ predn[pheno40>cut40]))[1]
+}
+
+# model the changes in intercept with the intensity of selection
+mod24 <- lm(resp24 ~ seln)
+mod40 <- lm(resp40 ~ seln)
+
+# Obtain estimates of the level of truncation selection to match the observed shift
+seln24 <- (coef(mod1)[1] - coef(mod24)[1])/coef(mod24)[2]
+seln40 <- (coef(mod1)[1] - coef(mod40)[1])/coef(mod40)[2]
+
+noquote(paste0("Estimated truncation selection for h=0.24: ",
+               format(seln24, digits = 2, scientific = FALSE)))
+
+noquote(paste0("Estimated truncation selection for h=0.40: ",
+               format(seln40, digits = 2, scientific = FALSE)))
+```
+
+```{r plot_simulated_regression, echo = FALSE}
+cutoff <- quantile(pheno24, 0.31)
+
+# Plot the simulated outcome after selection
+plot(predn,
+     bv0,
+     col = c("blue","red")[1+ (pheno24 < cutoff)],
+     main = "Simulated distribution of breeding values for juveniles
+     subjected to 31% selective deaths.
+     Blue points are survivors, red are eliminated.",
+     xlab = "GEBV predicted from relatives",
+     ylab = "Observed GEBV"
+     )
+abline(0,1, lty = 2)
+abline(lm(bv0[pheno24>cutoff] ~ predn[pheno24>cutoff]), col = "blue")
+
+```
+
