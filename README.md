@@ -35,9 +35,9 @@ Create Extended Data Figure 3
 ###  gebv_extremes_plots.Rmd
 Create Extended Data Figure 4
 
-###  adult_juv_gebv_shift.R
-Are juvenile GEBVs significantly different from adults
-Accounting for ancestry of juvenile trees by unlinked sites
+### GEBV-regression.Rmd
+Richard A. Nichols.
+
 
 ### sequoia_pedigree_subset.Rmd 
 Notebook used to estimate most likely parentage using sequoia.  
