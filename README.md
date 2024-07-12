@@ -65,4 +65,4 @@ Calculate the rate of greenup and plot Supplementary Figure 5
 * related_trees.csv
 * unlinked_sites.csv
 
-* See Supplement 2 for details on simulated analysis and Zenodo for additional files
+* See Supplement 2 for details on simulated analysis and Zenodo 10.5281/zenodo.10808942 for additional files
