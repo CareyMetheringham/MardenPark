@@ -13,6 +13,7 @@ Tests and plots correlation of adult GEBV and score with mean offspring health, 
 
 ### Figure3.Rmd
 
+Uses the GEBV of adult and juvenile trees as listed in Supplementary Data 1 and part of the code from GEBV-regression.Rmd (see below) to plot Figure 3
 
 ### allele_shift_correlation.R
 Correlation of effect size with alle frequency shift.
@@ -30,7 +31,7 @@ Test if the sites identified as having large effects in the field trial (10) con
 Create Extended Data Figure 2 from PLINK output
 
 ### GEBV_pheno_corr.R
-Create Extended Data Figure 3
+Create Extended Data Figure 3 showing the correlation og GEBV with phenotype for both the adult and juvenile age cohorts
 
 ###  gebv_extremes_plots.Rmd
 Create Extended Data Figure 4
@@ -38,6 +39,11 @@ Create Extended Data Figure 4
 ### GEBV-regression.Rmd
 Richard A. Nichols.
 
+Analysis of allele frequency change between adults and juveniles
+
+To assess whether the change in GEBV can be attributed to selection rather than genetic drift we adopt two approaches that exploit the genotypes at unlinked sites (sites not used in the GEBV calculations).
+
+Firstly we use these loci to calculate a matrix of relatedness among the pairs of plants. This matrix is then used to predict the GEBV of juveniles, from that of related adults.  The regression between observed and predicted GEBV allows for genetic drift; i.e. the differential success the adults. The action of selection would be apparent in in intercept: a positive intercept would be expected with selection for higher GEBV. This effect would occur if the siblings of the surviving juveniles, which had lower GEBV had succumbed to the fungus.
 
 ### sequoia_pedigree_subset.Rmd 
 Notebook used to estimate most likely parentage using sequoia.  
@@ -46,6 +52,12 @@ Parentage assignment was performed with the sequoia R package (V2.3.1) (19), usi
 
 ###  parent_offspring_allele_shift.R
 Uses effect_sizes.csv, gebv_site_frequencies.csv and related_trees.csv to test if allele frequencies differ from that expected from likely frequency
+
+### GreenupRate.R
+Richard A. Nichols.
+Calculate the rate of greenup and plot Supplementary Figure 5
+
+### Simulations.Rmd
 
 ## Data
 * effect_sizes.csv
