@@ -1,0 +1,187 @@
+---
+title: "Related Trees"
+---
+Code used to create Figure 2
+
+```{r}
+library(readxl)
+library(lme4)
+library(quantreg)
+library(ggplot2)
+```
+
+Import data
+```{r}
+related <- read.csv("~/Documents/Ash/related_trees.csv", sep=",")
+pheno <- read.csv("~/Documents/Ash/mp_mastersheet.10.03.2022_tidy_gebv.csv")
+```
+
+```{r}
+filtered_phenotype <- pheno[which(pheno$Type %in% c("Adult", "Juvenile") & !(is.na(pheno$GEBV))),]
+replicates <- c("S31R", "S54R","S67R", "S76R", "S82R", "S223R", "S332Q", "S410Q", "S415R", "S571Q",
+              "S655R", "S868R", "S885R", "S895R", "S901Q", "S925Q", "S928Q", "S939Q", "S954R", "S987Q",
+              "SA", "SB", "SE", "SH", "SJ", "S394C")
+filtered_phenotype <- filtered_phenotype[which(!(filtered_phenotype$Sample %in% replicates)),]
+```
+
+
+Count the number of offspring(sire or dam) per parent tree
+```{r}
+num_offspring <- table(c(related$dam, related$sire))
+num_offspring_tab <- data.frame(num_offspring)
+colnames(num_offspring_tab) <- c("Parent", "Num_Offspring")
+```
+```{r}
+parents <- filtered_phenotype[which(filtered_phenotype$Label %in% names(num_offspring)),]
+parent_health <- data.frame(parents$Label, parents$DBH, parents$PercentScore_2019, parents$PercentScore_2021, parents$GEBV)
+colnames(parent_health) <- c("Parent", "DBH", "Percent_2019", "Percent_2021", "GEBV")
+```
+Plot trees individually and weight by the confidence of the parentage assignment
+Weight by LLR/max(LLR)
+
+```{r}
+dam_health <- merge(related, parent_health, by.x = 'dam', by.y = 'Parent')
+dam_health$LLR <- dam_health$LLRdam
+dam_health$Parent_ID <- dam_health$dam
+sire_health <- merge(related, parent_health, by.x = 'sire', by.y = 'Parent')
+sire_health$LLR <- sire_health$LLRsire
+sire_health$Parent_ID <- sire_health$sire
+invd_parent_health <- rbind(dam_health, sire_health)
+invd_parent_health <- merge(invd_parent_health, filtered_phenotype, by.x = 'id', by.y = 'Label')
+head(invd_parent_health)
+```
+Quantile fit of juvenile score against adult GEBV
+```{r}
+# Fit quantile regression for the median (50th percentile)
+model_50 <- rq(Score_2019 ~ GEBV.x, tau = 0.5, data = invd_parent_health)
+# Fit for 25th and 75th percentiles
+model_25 <- rq(Score_2019 ~ GEBV.x, tau = 0.25, data = invd_parent_health)
+model_75 <- rq(Score_2019 ~ GEBV.x, tau = 0.75, data = invd_parent_health)
+
+summary(model_25)
+summary(model_50)
+summary(model_75)
+
+# Create a new data frame with GEBV values for prediction
+new_data <- data.frame(GEBV.x = seq(min(invd_parent_health$GEBV.x), max(invd_parent_health$GEBV.x), length.out = 100))
+
+# Predict Tree health for the different quantiles
+new_data$Tree_health_25 <- predict(model_25, newdata = new_data)
+new_data$Tree_health_50 <- predict(model_50, newdata = new_data)
+new_data$Tree_health_75 <- predict(model_75, newdata = new_data)
+
+parent_plot <- ggplot(invd_parent_health, aes(x = GEBV.x, y = Score_2019)) +
+    geom_point(color = "blue",
+               size = 2,
+               alpha = 0.6) +           # Scatter plot of data points
+    geom_line(
+        data = new_data,
+        aes(x = GEBV.x, y = Tree_health_25),
+        color = "green",
+        linetype = "dashed",
+        size = 1
+    ) +  # 25th percentile
+    geom_line(
+        data = new_data,
+        aes(x = GEBV.x, y = Tree_health_50),
+        color = "red",
+        size = 1.2
+    ) +                       # 50th percentile (median)
+    geom_line(
+        data = new_data,
+        aes(x = GEBV.x, y = Tree_health_75),
+        color = "orange",
+        linetype = "dashed",
+        size = 1
+    ) + # 75th percentile
+    labs(x = "Parent GEBV", y = "2019 Health Score", title = "Quantile Regression of Juvenile Score vs Parent GEBV") +
+    theme_minimal()
+
+parent_plot
+```
+
+
+juveniles 
+```{r}
+juveniles <- filtered_phenotype[filtered_phenotype$Type=="Juvenile",]
+adults <- filtered_phenotype[filtered_phenotype$Type=="Adult",]
+```
+```{r}
+# Fit quantile regression for the median (50th percentile)
+model_50 <- rq(Score_2019 ~ GEBV, tau = 0.5, data = juveniles)
+# Fit for 25th and 75th percentiles
+model_25 <- rq(Score_2019 ~ GEBV, tau = 0.25, data = juveniles)
+model_75 <- rq(Score_2019 ~ GEBV, tau = 0.75, data = juveniles)
+
+summary(model_25)
+summary(model_50)
+summary(model_75)
+
+# Create a new data frame with GEBV values for prediction
+new_data <- data.frame(GEBV = seq(min(juveniles$GEBV), max(juveniles$GEBV), length.out = 500))
+
+# Predict Tree health for the different quantiles
+new_data$Tree_health_25 <- predict(model_25, newdata = new_data)
+new_data$Tree_health_50 <- predict(model_50, newdata = new_data)
+new_data$Tree_health_75 <- predict(model_75, newdata = new_data)
+
+
+juv_plot <- ggplot(juveniles, aes(x = GEBV, y = Score_2019)) +
+    geom_point(color = "blue",
+               size = 2,
+               alpha = 0.6) +           # Scatter plot of data points
+    geom_line(
+        data = new_data,
+        aes(x = GEBV, y = Tree_health_25),
+        color = "green",
+        linetype = "dashed",
+        size = 1
+    ) +  # 25th percentile
+    geom_line(
+        data = new_data,
+        aes(x = GEBV, y = Tree_health_50),
+        color = "red",
+        size = 1.2
+    ) +                       # 50th percentile (median)
+    geom_line(
+        data = new_data,
+        aes(x = GEBV, y = Tree_health_75),
+        color = "orange",
+        linetype = "dashed",
+        size = 1
+    ) + # 75th percentile
+    labs(x = "GEBV", y = "2019 Health Score", title = "Quantile Regression of Juvenile Score vs GEBV") +
+    theme_minimal()
+
+juv_plot
+```
+```{r}
+# Fit quantile regression for the median (50th percentile)
+model_50 <- rq(PercentScore_2019 ~ GEBV, tau = 0.5, data = adults)
+# Fit for 25th and 75th percentiles
+model_25 <- rq(PercentScore_2019 ~ GEBV, tau = 0.25, data = adults)
+model_75 <- rq(PercentScore_2019 ~ GEBV, tau = 0.75, data = adults)
+
+summary(model_25)
+summary(model_50)
+summary(model_75)
+
+# Create a new data frame with GEBV values for prediction
+new_data <- data.frame(GEBV = seq(min(adults$GEBV), max(adults$GEBV), length.out = 500))
+
+# Predict Tree health for the different quantiles
+new_data$Tree_health_25 <- predict(model_25, newdata = new_data)
+new_data$Tree_health_50 <- predict(model_50, newdata = new_data)
+new_data$Tree_health_75 <- predict(model_75, newdata = new_data)
+
+adult_plot <- ggplot(adults, aes(x = GEBV, y = PercentScore_2019)) +
+  geom_point(color = "blue", size = 2, alpha = 0.6) +           # Scatter plot of data points
+  geom_line(data = new_data, aes(x = GEBV, y = Tree_health_25), color = "green", linetype = "dashed", size = 1) +  # 25th percentile
+  geom_line(data = new_data, aes(x = GEBV, y = Tree_health_50), color = "red", size = 1.2) +                       # 50th percentile (median)
+  geom_line(data = new_data, aes(x = GEBV, y = Tree_health_75), color = "orange", linetype = "dashed", size = 1) + # 75th percentile
+  labs(x = "GEBV", y = "2019 Canopy Cover", title = "Quantile Regression of Adult Score vs GEBV") +
+  theme_minimal()
+
+adult_plot
+```
+
