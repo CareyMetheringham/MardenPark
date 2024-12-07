@@ -1,5 +1,5 @@
 #Correlation of effect size with alle frequency shift
-#Based on methods and code by Richard A. Nichols
+#Methods and code by Richard A. Nichols + plotting scripts
 
 #Import effect sizes
 es_file <- read.csv("MP_effects_MIA_and_MAA.csv")
@@ -79,7 +79,7 @@ int <- coefficients(mod2)[1]
 slope <- coefficients(mod2)[2]
 
 library(ggplot2)
-fig5 <- ggplot(data = binned_table, aes(x = ESPQ, y = DIFF))+
+fig4 <- ggplot(data = binned_table, aes(x = ESPQ, y = DIFF))+
   geom_point(aes(alpha = 0.2, size = 0.7/ese))+
   geom_abline(intercept = int, slope = slope, colour = "red")+
   theme_minimal()+
@@ -87,12 +87,14 @@ fig5 <- ggplot(data = binned_table, aes(x = ESPQ, y = DIFF))+
   ylab("Mean change in allele frequency")+
   xlab("Effect size x pq (200 quantiles)")
   
-tiff("/Users/carey/University/Marden_Park/Figures/Final_Figures/mp_fig3.tiff", units="mm", width=180, height=100, res=300)
-fig5
+tiff("Figures/Fig4.tiff", units="mm", width=180, height=100, res=300)
+fig4
 dev.off()
-png("/Users/carey/University/Marden_Park/Figures/Final_Figures/mp_fig3.png", units="mm", width=180, height=100, res=300)
-fig5
+png("Figures/Fig4.png", units="mm", width=180, height=100, res=300)
+fig4
 dev.off()
-jpeg("/Users/carey/University/Marden_Park/Figures/Final_Figures/mp_fig3.jpeg", units="mm", width=180, height=100, res=300)
-fig5
+jpeg("Figures/Fig4.jpeg", units="mm", width=180, height=100, res=300)
+fig4
+dev.off()
+ggsave("Figures/Fig4.svg", plot = fig4, width = 180 / 25.4, height = 200 / 25.4)
 dev.off()
