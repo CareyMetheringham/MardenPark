@@ -1,5 +1,5 @@
 ---
-title: "Ash manuscript Figure 3A"
+title: "Ash manuscript Figure 3A & B"
 output: html_notebook
 ---
 ```{r}
@@ -29,125 +29,131 @@ violin <- ggplot(filtered_phenotype, aes(x = Type, group = Type, y = as.numeric(
   scale_x_discrete(labels = c( "Juvenile" = "Juvenile (n=452)", "Adult" = "Adult (n=128)")) +
   theme_minimal(base_size=15) +
   theme(legend.position="none") +
-  labs(title = "A",
-       x = "",
-       y = "GEBV")
+  labs(x = "",
+       y = "GEBV scores")
+
+violin
+```
+
+```{r director, echo = FALSE}
+# set working directory to the path to the files of allele frequencies and effect sizes
+# if it is not the current directory, replace "." with the appropriate path
+setwd(".")
+set.seed(4242)
+```
+
+# Analysis of allele frequency change between adults and juveniles
+
+To assess whether the change in GEBV can be attributed to selection rather than genetic drift we adopt two approaches that exploit the genotypes at unlinked sites (sites not used in the GEBV calculations).
+
+Firstly we use these loci to calculate a matrix of relatedness among the pairs of plants. This matrix is then used to predict the GEBV of juveniles, from that of related adults.  The regression between observed and predicted GEBV allows for genetic drift; i.e. the differential success the adults. The action of selection would be apparent in in intercept: a positive intercept would be expected with selection for higher GEBV. This effect would occur if the siblings of the surviving juveniles, which had lower GEBV had succumbed to the fungus.
+
+The second comparison is of the change in allele frequency between adults and juveniles as measured by an F statistic. Any additional changes in allele frequency due to selection would be expected to produce a larger difference between the generations at the GEBV loci, particularly those loci with a larger effect size.
+
+```{r read_data, echo = FALSE}
+
+
+rdat <- read.csv("unlinked_sites.csv")
+
+# get matrix of unlinked loci (+1 to get -1/0/1 format)
+ngmat <- 1 + as.matrix(rdat[,-(1:3)])
+
+
+# Which observations are Adult and Juvenile
+adults <- rdat$Age == "Adult"
+juveniles <-  rdat$Age == "Juv"
+
+
+# Calculate allele frequencies for Adults and Juveniles
+afreq <- colMeans(ngmat[adults,] + 1)/2
+jfreq <- colMeans(ngmat[juveniles,] + 1)/2
+
+```
+
+# Calculating the predicted GEBV of the juveniles
+
+The additive relationship matrix A is calculated from the genotypes at the unlinked loci (ngmat), which is then used to calculate the expected GEBV of the offspring.
+
+The regression of observed and expected GEBV is highly significant, and has a highly significant positive intercept, consistent with selection in favour of high GEBV scores.
+
+
+```{r predict, echo = TRUE}
+library(rrBLUP)
+library(MASS)
+
+# set number of iterations for F null distribution calculations (e.g. 1e4 for higher accuracy)
+nits <- 3e3
+
+# Calculate the relationship matrix using the rrBLUP function ngmat
+A <- A.mat(ngmat)
+
+# Standardize breeding values to have mean of zero in adults
+bvs <- rdat$GEBV - mean(rdat$GEBV[adults])
+
+sigma_adult <- A[adults,adults]
+bv_adult <- bvs[adults]
+bv_juv <- bvs[juveniles]
+
+# Calculate predictions using the MASS function solve
+predn <- t(A[adults,juveniles]) %*% solve(sigma_adult) %*% bv_adult 
+
+```
+ggplot version of plot
+
+```{r}
+library(ggplot2)
+data <- data.frame(predn, bv_juv)
+
+plot <- ggplot(data, aes(x = predn, y = bv_juv)) +
+  geom_point(alpha=0.5) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed") +
+  labs(x = "Juvenile GEBV scores predicted from ancestry", y = "GEBV scores") +
+  geom_smooth(method = "lm", col = "blue", se = FALSE) +
+  theme_minimal(base_size=15)
+
+plot
+```
+Plot with error bars
+
+```{r}
+library(ggplot2)
+data <- data.frame(predn, bv_juv)
+
+plot <- ggplot(data, aes(x = predn, y = bv_juv)) +
+  geom_point(alpha=0.5) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed") +
+  labs(x = "Juvenile GEBV scores predicted from ancestry", y = "GEBV scores") +
+  geom_smooth(method = "lm", col = "blue", se = TRUE, fill = "blue") +
+  theme_minimal(base_size=15)
+
+plot
+```
+
+
+Combine plots
+
+```{r}
+library(ggpubr)
+fig3 <- ggarrange(violin, plot,
+          labels = c("A", "B"),
+          ncol = 1, nrow = 2)
+
+fig3
 ```
 ```{r}
 #Save output to file
-tiff("~/Documents/Ash/Figures/3A.tiff", units="mm", width=180, height=100, res=300)
-violin
+tiff("~/Documents/Ash/Figures/Fig3.tiff", units="mm", width=180, height=200, res=300)
+fig3
 dev.off()
-png("~/Documents/Ash/Figures/3A.png", units="mm", width=180, height=100, res=300)
-violin
+png("~/Documents/Ash/Figures/Fig3.png", units="mm", width=180, height=200, res=300)
+fig3
 dev.off()
-jpeg("~/Documents/Ash/Figures/3A.jpg", units="mm", width=180, height=100, res=300)
-violin
+jpeg("~/Documents/Ash/Figures/Fig3.jpg", units="mm", width=180, height=200, res=300)
+fig3
 dev.off()
-```
-
-Box plot with overplotting
-```{r}
-ggplot(filtered_phenotype, aes(x = Type, group = Type, y = as.numeric(GEBV))) +
-  geom_boxplot(outlier.shape = NA, fill = c("darkorange2", "skyblue1")) +  # Draw boxplot without outliers
-  geom_jitter(width = 0.3, alpha = 0.5) +  # Add jittered points
-  scale_x_discrete(labels = c( "Juvenile" = "Juvenile (n=452)", "Adult" = "Adult (n=128)")) +
-  theme_minimal(base_size=15) +
-  labs(title = "A",
-       x = "",
-       y = "GEBV")
+ggsave("~/Documents/Ash/Figures/Fig3.svg", plot = fig3, width = 180 / 25.4, height = 200 / 25.4)
 ```
 ```{r}
-beeswarm <- ggplot(filtered_phenotype, aes(x = Type, group = Type, y = as.numeric(GEBV))) +
-  geom_boxplot(outlier.shape = NA, fill = c("darkorange2", "skyblue1")) +  # Draw boxplot without outliers
-  #geom_beeswarm(cex = 1, alpha = 0.5) +  # Add jittered points
-  scale_x_discrete(labels = c( "Juvenile" = "Juvenile (n=452)", "Adult" = "Adult (n=128)")) +
-  theme_minimal(base_size=15) +
-  labs(title = "A",
-       x = "",
-       y = "GEBV")
-
-beeswarm <- beeswarm + geom_quasirandom()
+mod <- lm(data$predn ~ 1, offset = data$bv_juv)
+summary(mod)
 ```
-
-
-
-
-```{r}
-ggplot(filtered_phenotype, aes(x = Type, group = Type, colour = Type, y = as.numeric(GEBV))) +
-  geom_beeswarm(cex = 2) +  # Add jittered points
-  scale_x_discrete(labels = c( "Juvenile" = "Juvenile (n=452)", "Adult" = "Adult (n=128)")) +
-  scale_colour_manual(values = c( "Juvenile" = "skyblue3", "Adult" = "darkorange2")) +
-  theme_minimal(base_size=15) +
-  theme(legend.position="none") +
-  labs(title = "A",
-       x = "",
-       y = "GEBV")
-```
-```{r}
-juveniles <- as.numeric(filtered_phenotype$GEBV[filtered_phenotype$Type=="Juvenile"])
-juveniles <- juveniles[!is.na(juveniles)]
-adults <- as.numeric(filtered_phenotype$GEBV[filtered_phenotype$Type=="Adult"])
-adults <- adults[!is.na(adults)]
-```
-
-Normality Tests
-```{r}
-ggqqplot(adults)
-ggqqplot(juveniles)
-ggqqplot(c(juveniles,adults))
-shapiro.test(adults)
-shapiro.test(juveniles)
-shapiro.test(c(juveniles,adults))
-```
-
-
-
-
-Statistical test - double check for duplicates
-
-```{r}
-
-t.test(juveniles, adults)
-wilcox.test(juveniles, adults)
-```
-Correlation of height and GEBV in juveniles
-
-```{r}
-juvenile_table <- filtered_phenotype[which(filtered_phenotype$Type=="Juvenile" & filtered_phenotype$Height < 10),]
-```
-
-```{r}
-ggplot(juvenile_table, aes(x = as.numeric(GEBV), y = as.numeric(Height)))+
-    geom_point()+
-    theme_minimal(base_size=15) +
-    theme(legend.position="none") +
-     labs(title = "",
-       x = "GEBV",
-       y = "Height")
-
-cor.test(as.numeric(juvenile_table$GEBV), as.numeric(juvenile_table$Height))
-```
-```{r}
-ggplot(juvenile_table, aes(x = as.numeric(Score_2019), y = as.numeric(Height), group = Score_2019))+
-    geom_boxplot()+
-    theme_minimal(base_size=15) +
-    theme(legend.position="none") +
-     labs(title = "",
-       x = "2019 Score",
-       y = "Height")
-
-cor.test(as.numeric(juvenile_table$Score_2019), as.numeric(juvenile_table$Height))
-```
-```{r}
-ggplot(juvenile_table, aes(x = as.numeric(Score_2021), y = as.numeric(Height),  group = Score_2021))+
-    geom_boxplot()+
-    theme_minimal(base_size=15) +
-    theme(legend.position="none") +
-     labs(title = "",
-       x = "2021 Score",
-       y = "Height")
-
-cor.test(as.numeric(juvenile_table$Score_2021), as.numeric(juvenile_table$Height))
-```
-
